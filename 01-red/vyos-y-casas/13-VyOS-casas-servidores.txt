@@ -1,0 +1,34 @@
+=====================================================================
+ VyOS, routers domesticos y servidores
+=====================================================================
+
+--- VyOS (VM en la Vivobook; eth1 en puente al adaptador USB -> MikroTik ether5) ---
+configure
+delete protocols static
+set protocols static route 10.0.0.0/8 next-hop 190.0.50.1
+set protocols static route 192.168.100.0/24 next-hop 190.0.50.1
+set protocols static route 192.168.200.0/24 next-hop 190.0.50.1
+commit
+save
+exit
+(La regla "nat source rule 100" con masquerade por eth0 da la salida a Internet.)
+
+--- Routers domesticos (menu web, WAN por DHCP) ---
+Casa 1   WAN por DHCP desde R4 (red 192.168.100.0/24)   -> cable a R4 Gi0/0/1
+Casa 2   WAN por DHCP desde R5 (red 192.168.200.0/24)   -> cable a R5 Gi0/0/1
+Casa 3   WAN por DHCP desde el MikroTik (red 10.1.50.0/24) -> cable a MikroTik ether8
+(Si el puerto 80 del router domestico choca con su administracion remota, moverla al 8080.)
+
+--- Servidores: en cada uno, como root ---
+modo-lab
+verificar-lab
+
+Conexion y direccion de cada servidor:
+srv-bd      SWdistri1 Gi1/0/11   192.168.40.10  puerta 192.168.40.1
+srv-aaa-1   SWdistri1 Gi1/0/12   192.168.40.11  puerta 192.168.40.1
+correo      SWdistri1 Gi1/0/13   192.168.60.10  puerta 192.168.60.1  (DMZ, publicado como 10.1.40.13)
+damian      SWdistri2 Gi1/0/10   192.168.40.13  puerta 192.168.40.1
+MacBook     SWdistri2 Gi1/0/11   VMs srv-aaa-2, srv-monitoreo y srv-apps (por Tailscale en modo-lab)
+
+--- PCs de usuarios ---
+Se conectan a cualquier puerto Fa0/1-22 del switch de su area y reciben IP por DHCP.

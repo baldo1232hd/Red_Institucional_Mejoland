@@ -1,0 +1,50 @@
+! =====================================================================
+!  SW-NUBE-A  (Catalyst 2960, capa 2)
+!  Antes de aplicar:  enable / write erase / reload  (responder "no" a Save)
+!
+!   Gi0/1  -> MikroTik ether6          troncal 203,211
+!   Fa0/1  -> R4 Gi0/0                 troncal 203,214,245
+!   Fa0/2  -> R1 Gi0/1                 troncal 211,214
+!   Gi0/2  -> SW-NUBE-B Gi0/2          troncal 245
+! =====================================================================
+enable
+configure terminal
+hostname SW-NUBE-A
+no ip domain-lookup
+vtp mode transparent
+spanning-tree mode rapid-pvst
+vlan 203
+ name MK-R4
+vlan 211
+ name MK-R1
+vlan 214
+ name R1-R4
+vlan 245
+ name R4-R5
+exit
+interface GigabitEthernet0/1
+ description MikroTik ether6
+ switchport mode trunk
+ switchport trunk allowed vlan 203,211
+ switchport nonegotiate
+ no shutdown
+interface FastEthernet0/1
+ description R4 Gi0/0
+ switchport mode trunk
+ switchport trunk allowed vlan 203,214,245
+ switchport nonegotiate
+ no shutdown
+interface FastEthernet0/2
+ description R1 Gi0/1
+ switchport mode trunk
+ switchport trunk allowed vlan 211,214
+ switchport nonegotiate
+ no shutdown
+interface GigabitEthernet0/2
+ description SW-NUBE-B Gi0/2
+ switchport mode trunk
+ switchport trunk allowed vlan 245
+ switchport nonegotiate
+ no shutdown
+end
+write memory

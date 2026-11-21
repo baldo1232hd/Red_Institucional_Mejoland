@@ -1,0 +1,51 @@
+=====================================================================
+ MODOS DE RED (CASA / LABORATORIO) - Centro Educativo Mejoland
+=====================================================================
+Los servidores trabajan en dos modos:
+  modo-casa   Cada servidor en una red domestica; se comunican por Tailscale (VPN).
+  modo-lab    Red fisica del diseno (VLAN 40 y DMZ 60) con IP estaticas.
+Cada cambio de modo regenera /etc/hosts, las zonas DNS mejoland.edu.ec y proyecto.local,
+los enlaces de EduNova y los destinos del proxy, siempre con las IP del modo activo.
+
+ARCHIVOS
+  preparar-lab.sh     Prepara los servidores para el laboratorio sin cortar el acceso remoto.
+  corregir-modos.sh   Instala modo-lab, modo-casa, modo-actualizar, modo-red y verificar-lab.
+  verificar-lab.sh    Revision completa del laboratorio (solo lectura).
+
+INSTALACION (una vez, en los 7 servidores, como root)
+  1. Copiar preparar-lab.sh y corregir-modos.sh a /tmp de cada servidor (USB o scp).
+  2. Orden: srv-bd, damian, correo, srv-aaa-1 y las 3 VMs de la Mac.
+  3. En cada uno:   bash /tmp/preparar-lab.sh
+     (ejecuta corregir-modos.sh al final; deja respaldo y /root/proyecto/corregir-modos-<fecha>/deshacer.sh)
+
+COMANDOS
+  modo-lab          Cambia a la red del laboratorio. Ejecutar desde la consola del servidor.
+  modo-casa         Vuelve a la red domestica. En el laboratorio deja el equipo sin red: pide confirmacion.
+  modo-actualizar   Regenera nombres, DNS, enlaces y proxy para el modo actual sin tocar la red.
+  modo-red          Estado: modo, interfaz, IP virtual, equipos por Tailscale.
+  verificar-lab     Revision completa (solo lectura).
+
+CONFIGURACION: /etc/mejoland/red/lab.conf  (igual en los 7 servidores)
+  REMOTOS="srv-apps srv-monitoreo srv-aaa-2"
+      Equipos que en el laboratorio se alcanzan por Tailscale. Si la Mac se conecta por cable
+      en modo puente a la VLAN 40, dejar REMOTOS="" y ejecutar modo-actualizar en todos.
+  LAB_IF=""
+      Vacio = se elige la interfaz con enlace. Para fijarla: LAB_IF="enx00e04c0c5078"
+
+PUESTA EN MARCHA EN EL LABORATORIO
+  1. Conectar los cables (srv-bd primero).
+  2. srv-bd: modo-lab  ->  damian: modo-lab  ->  correo y srv-aaa-1: modo-lab
+     Las VMs de la Mac permanecen en modo casa (se alcanzan por Tailscale).
+  3. En cualquier servidor:  verificar-lab
+  4. Desde una PC de la VLAN 10:      https://mejoland.edu.ec/plataforma/
+  5. Desde una red domestica:         https://10.1.40.13/plataforma/
+
+ENLACES DE EDUNOVA EN EL LABORATORIO
+  Correo, Nube, GLPI .... https://mejoland.edu.ec/webmail/  /nube/  /glpi/
+  Secretaria y LAM ...... https://srv-bd.proyecto.local/...  (solo red interna)
+  Zabbix ................ https://mejoland.edu.ec/zabbix/     (solo red interna)
+  Desde Internet solo se muestran Correo, Nube y GLPI.
+
+LIMITACIONES
+  - srv-aaa-2 por Tailscale no es alcanzable por los routers; RADIUS lo atiende srv-aaa-1.
+  - Los servidores del laboratorio necesitan salida a Internet para Tailscale.

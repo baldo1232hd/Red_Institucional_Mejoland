@@ -1,0 +1,46 @@
+! =====================================================================
+!  SW-ACC-ADMIN  (Catalyst 2960)
+!  Antes de aplicar:  enable / write erase / delete flash:vlan.dat / reload
+!
+!   Gi0/1        -> SWdistri1 Gi1/0/2   troncal
+!   Gi0/2        -> SWdistri2 Gi1/0/2   troncal
+!   Fa0/1-22     -> PCs de administracion  acceso VLAN 10
+!   Gestion: 192.168.50.11 (VLAN 50), puerta 192.168.50.1
+!  (Si Gi0/1-2 son SFP sin modulo, usar Fa0/23-24 para los dos troncales)
+! =====================================================================
+enable
+configure terminal
+hostname SW-ACC-ADMIN
+no ip domain-lookup
+vtp mode transparent
+spanning-tree mode rapid-pvst
+vlan 10
+ name ADMINISTRACION
+vlan 50
+ name GESTION
+exit
+ip default-gateway 192.168.50.1
+ip dhcp snooping
+ip dhcp snooping vlan 10
+no ip dhcp snooping information option
+
+interface range GigabitEthernet0/1 - 2
+ description troncal a SWdistri1 / SWdistri2
+ switchport mode trunk
+ switchport trunk allowed vlan 10,50
+ switchport nonegotiate
+ ip dhcp snooping trust
+ no shutdown
+interface range FastEthernet0/1 - 22
+ switchport mode access
+ switchport access vlan 10
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+interface Vlan1
+ shutdown
+interface Vlan50
+ ip address 192.168.50.11 255.255.255.0
+ no shutdown
+end
+write memory

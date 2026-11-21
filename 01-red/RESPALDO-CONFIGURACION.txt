@@ -1,0 +1,33 @@
+=====================================================================
+ RESPALDO DE LA CONFIGURACION DE LOS EQUIPOS DE RED
+ Comandos para exportar la configuracion guardada en cada equipo.
+ Guardar cada salida como <equipo>.txt (no se versiona en el repositorio).
+=====================================================================
+CISCO (R1, R3, R4, R5, SW-NUBE-A, SW-NUBE-B, SWdistri1, SWdistri2, SW-ACC-ADMIN/DOCENTES/ESTUDIANTES)
+  Activar el registro de sesion en PuTTY o TeraTerm (Session > Logging > All session output) y ejecutar:
+    terminal length 0
+    show version
+    show running-config
+    show ip interface brief
+    show interfaces status          (switches)
+    show vlan brief                 (switches)
+    show etherchannel summary       (SWdistri)
+    show spanning-tree summary      (switches)
+    show standby brief              (R1, R3)
+    show ip ospf neighbor           (R1, R3)
+    show ip bgp summary             (R1, R3, R4, R5)
+    show ip nat translations        (R1, R3)
+    show ip dhcp pool               (R1, R3, R4, R5)
+  Antes de compartir el archivo, eliminar las lineas 'username ... secret' y 'enable secret'.
+
+MIKROTIK (WinBox > New Terminal)
+    /export hide-sensitive file=mk-isp-a
+    (Files > descargar mk-isp-a.rsc)
+    /routing bgp session print
+    /ip address print
+    /ip firewall filter print
+
+VYOS
+    show configuration commands | no-more
+
+ROUTERS DOMESTICOS: captura de pantalla de WAN, LAN/DHCP y Wi-Fi (sin la clave).

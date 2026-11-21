@@ -1,0 +1,15 @@
+# Los scripts de Linux deben quedar con fin de linea LF aunque se clone en Windows
+*.sh     text eol=lf
+*.py     text eol=lf
+*.js     text eol=lf
+*.json   text eol=lf
+*.sql    text eol=lf
+*.php    text eol=lf
+*.rsc    text eol=lf
+02-servidores/damian/mejoland-ha-damian   text eol=lf
+02-servidores/srv-bd/mejoland-ha-srvbd    text eol=lf
+03-seguridad-centinela/Modelfile      text eol=lf
+# Los .bat de Windows con CRLF
+*.bat    text eol=crlf
+*.pkt    binary
+*.jpg    binary

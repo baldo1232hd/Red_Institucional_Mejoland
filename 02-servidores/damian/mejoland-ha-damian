@@ -1,0 +1,88 @@
+#!/bin/bash
+# =====================================================================
+#  mejoland-ha (damian-1) - servidor de RESPALDO con toma de control automatica
+#    estado              muestra el estado actual
+#    vigilar             (lo ejecuta el temporizador cada 10 s) vigila SRV-BD y promueve si cae
+#    promover            toma el control a mano (solo si SRV-BD esta realmente caido)
+#    preparar-regreso    paso 1 del regreso: deja de atender y crea un acceso temporal para SRV-BD
+#    volver-a-replica C  paso 3 del regreso: vuelve a ser replica de SRV-BD (C = clave que muestra SRV-BD)
+# =====================================================================
+set -u
+. /etc/mejoland-ha/ha.conf          # PRINCIPAL_TS, PRINCIPAL_URL, TESTIGOS, SVC, FALLOS_MAX
+D=/var/lib/mejoland-ha; mkdir -p $D
+ESTADO=$(cat $D/estado 2>/dev/null || echo ESPERA)
+log() { echo "$(date '+%F %T') $*" | tee -a /var/log/mejoland-ha.log; logger -t mejoland-ha "$*"; }
+MON="--defaults-extra-file=/etc/mejoland-ha/monitor.cnf"
+
+principal_vivo() {
+  [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$PRINCIPAL_URL")" = "200" ] && return 0
+  timeout 4 mysql $MON -h "$PRINCIPAL_TS" -N -e "SELECT 1" >/dev/null 2>&1 && return 0
+  return 1
+}
+testigo_visible() {   # si no responde ningun testigo, este equipo esta aislado y no promueve
+  for t in $TESTIGOS; do timeout 3 bash -c "</dev/tcp/${t%:*}/${t#*:}" 2>/dev/null && return 0; done
+  return 1
+}
+
+promover() {
+  log "PROMOCION: damian-1 toma el control ($1)"
+  mysql -e "STOP REPLICA; SET GLOBAL read_only=0;" || { log "ERROR: no se pudo promover MariaDB"; return 1; }
+  systemctl start lms
+  tailscale serve advertise "$SVC" && log "Anunciando $SVC: los usuarios llegan a damian-1"
+  echo PRINCIPAL > $D/estado; date '+%F %T' > $D/desde; echo 0 > $D/fallos
+}
+
+case "${1:-estado}" in
+  estado)
+    echo "Estado de damian-1: $ESTADO $( [ -f $D/desde ] && echo "(desde $(cat $D/desde))")"
+    echo "MariaDB read_only=$(mysql -N -e 'SELECT @@read_only')  replica: $(mysql -e 'SHOW REPLICA STATUS\G' | awk '/Slave_IO_Running:|Slave_SQL_Running:/{printf "%s ",$2}')"
+    echo "EduNova en damian-1: $(systemctl is-active lms)"
+    principal_vivo && echo "SRV-BD: responde" || echo "SRV-BD: NO responde"
+    echo "Fallos seguidos: $(cat $D/fallos 2>/dev/null || echo 0)/$FALLOS_MAX"
+    tail -5 /var/log/mejoland-ha.log 2>/dev/null ;;
+  vigilar)
+    if [ "$ESTADO" = "PRINCIPAL" ]; then   # tras un reinicio de damian-1 al mando: se reafirma
+      [ "$(mysql -N -e 'SELECT @@read_only')" = "0" ] || { mysql -e "STOP REPLICA; SET GLOBAL read_only=0"; log "Reafirmado como principal (read_only=0)"; }
+      systemctl is-active -q lms || systemctl start lms
+      exit 0
+    fi
+    [ "$ESTADO" = "ESPERA" ] || exit 0
+    if principal_vivo; then echo 0 > $D/fallos; exit 0; fi
+    if ! testigo_visible; then log "SRV-BD no responde, pero tampoco veo a los testigos: el aislado puedo ser yo. No promuevo."; exit 0; fi
+    F=$(( $(cat $D/fallos 2>/dev/null || echo 0) + 1 )); echo $F > $D/fallos
+    log "SRV-BD no responde ($F/$FALLOS_MAX)"
+    [ "$F" -ge "$FALLOS_MAX" ] && promover "SRV-BD caido $F veces seguidas" ;;
+  promover)
+    [ "$ESTADO" = "PRINCIPAL" ] && { echo "Ya es principal."; exit 0; }
+    principal_vivo && { echo "SRV-BD esta respondiendo: no se promueve (evita dos principales)."; exit 1; }
+    promover "manual" ;;
+  preparar-regreso)
+    [ "$ESTADO" = "PRINCIPAL" ] || { echo "damian-1 no esta al mando (estado $ESTADO)."; exit 1; }
+    principal_vivo || { echo "SRV-BD aun no responde. Enciendelo antes del regreso."; exit 1; }
+    log "REGRESO paso 1: damian-1 deja de atender"
+    tailscale serve drain "$SVC"; systemctl stop lms
+    mysql -e "SET GLOBAL read_only=1"
+    CL=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+    mysql -e "SET SESSION sql_log_bin=0; DROP USER IF EXISTS 'ha_volcado'@'$PRINCIPAL_TS';
+      CREATE USER 'ha_volcado'@'$PRINCIPAL_TS' IDENTIFIED BY '$CL';
+      GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES, RELOAD, BINLOG MONITOR, PROCESS ON *.* TO 'ha_volcado'@'$PRINCIPAL_TS';"
+    echo REGRESANDO > $D/estado
+    echo; echo "Ahora en SRV-BD (root):  mejoland-ha regresar $CL" ;;
+  volver-a-replica)
+    CL=${2:-}; [ -n "$CL" ] || { echo "Uso: mejoland-ha volver-a-replica CLAVE (la muestra SRV-BD)"; exit 1; }
+    mysql -e "SET SESSION sql_log_bin=0; DROP USER IF EXISTS 'ha_volcado'@'$PRINCIPAL_TS';"
+    CNF=$(mktemp); chmod 600 "$CNF"; trap 'rm -f "$CNF"' EXIT
+    printf '[client]\nhost=%s\nuser=volcado\npassword=%s\n' "$PRINCIPAL_TS" "$CL" > "$CNF"
+    DBS=$(mysql --defaults-extra-file="$CNF" -N -e "SHOW DATABASES" | grep -vE '^(mysql|information_schema|performance_schema|sys)$' | tr '\n' ' ')
+    [ -n "$DBS" ] || { echo "No puedo conectarme a SRV-BD con el usuario volcado."; exit 1; }
+    log "REGRESO paso 3: damian-1 vuelve a ser replica"
+    mysql -e "STOP REPLICA; SET GLOBAL read_only=0"
+    mariadb-dump --defaults-extra-file="$CNF" --single-transaction --gtid --master-data=1 --routines --triggers --events --databases $DBS | mysql \
+      || { log "ERROR copiando desde SRV-BD"; exit 1; }
+    mysql -e "SET GLOBAL read_only=1; START REPLICA"; sleep 4
+    mysql -e "SHOW REPLICA STATUS\G" | grep -E "IO_Running|SQL_Running:|Seconds_Behind"
+    echo ESPERA > $D/estado; rm -f $D/desde; echo 0 > $D/fallos
+    log "damian-1 de nuevo EN ESPERA (replica de SRV-BD)"
+    echo "Listo. Ultimo paso en SRV-BD:  mejoland-ha limpiar" ;;
+  *) sed -n '3,9p' "$0"; exit 1 ;;
+esac

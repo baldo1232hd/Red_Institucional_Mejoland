@@ -1,0 +1,120 @@
+# Nmap 7.993 scan initiated Wed Nov 18 14:48:08 2026 as: "C:\\Program Files (x86)\\Nmap\\nmap.exe" -Pn -sT -T3 --top-ports 200 --open -sV --version-light --max-retries 1 -oN "C:\\Users\\SIN_FUTURO\\Desktop\\configs proyecto v3\\documentos\\pruebas\\escaneo-puertos-20261118-1448.txt" 100.89.203.22 100.93.52.67 100.65.119.48 100.75.163.23 100.74.49.76 100.123.222.5 100.107.96.3
+Nmap scan report for srv-bd.tailae692e.ts.net. (100.89.203.22)
+Host is up (0.15s latency).
+Not shown: 187 closed tcp ports (conn-refused), 1 filtered tcp port (no-response)
+Some closed ports may be reported as filtered due to --defeat-rst-ratelimit
+PORT     STATE SERVICE     VERSION
+22/tcp   open  ssh         OpenSSH 10.0p2 (protocol 2.0)
+53/tcp   open  domain      (unknown banner: no disponible)
+139/tcp  open  netbios-ssn Samba smbd 4
+389/tcp  open  ldap        OpenLDAP 2.2.X - 2.3.X
+443/tcp  open  ssl/https?
+445/tcp  open  netbios-ssn Samba smbd 4
+631/tcp  open  ipp         CUPS 2.4
+3000/tcp open  http        Grafana http
+3001/tcp open  nessus?
+3306/tcp open  mysql       MariaDB 11.8.6
+9090/tcp open  http        Golang net/http server (Go-IPFS json-rpc or InfluxDB API)
+9100/tcp open  jetdirect?
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port3001-TCP:V=7.993%I=2%D=11/18%Time=6AFE0103%P=i686-pc-windows-window
+SF:s%r(NCP,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\
+SF:r\n\r\n")%r(GetRequest,1838,"HTTP/1\.1\x20200\x20OK\r\nX-Content-Type-O
+SF:ptions:\x20nosniff\r\nX-Frame-Options:\x20DENY\r\nReferrer-Policy:\x20n
+SF:o-referrer\r\nAccept-Ranges:\x20bytes\r\nCache-Control:\x20public,\x20m
+SF:ax-age=0\r\nLast-Modified:\x20Sun,\x2008\x20Nov\x202026\x2016:52:25\x20
+SF:GMT\r\nETag:\x20W/\"1a799-1a1bc1353bc\"\r\nContent-Type:\x20text/html;\
+SF:x20charset=utf-8\r\nContent-Length:\x20108441\r\nDate:\x20Wed,\x2018\x2
+SF:0Nov\x202026\x2019:48:25\x20GMT\r\nConnection:\x20close\r\n\r\n<!DOCTYP
+SF:E\x20html>\n<html\x20lang=\"es\">\n<head>\n\x20\x20<meta\x20charset=\"U
+SF:TF-8\"\x20/>\n\x20\x20<meta\x20name=\"viewport\"\x20content=\"width=dev
+SF:ice-width,\x20initial-scale=1\.0\"\x20/>\n\x20\x20<title>EduNova\x20\xc
+SF:2\xb7\x20Centro\x20Educativo\x20Mejoland</title>\n\x20\x20<link\x20rel=
+SF:\"icon\"\x20href=\"logo\.jpg\"\x20/>\n\x20\x20<!--\x20Estilos\x20Tailwi
+SF:nd\x20ya\x20compilados\x20\(17\x20KB,\x20sin\x20internet\x20ni\x20JavaS
+SF:cript\x20extra\)\x20-->\n\x20\x20<link\x20rel=\"stylesheet\"\x20href=\"
+SF:estilos\.css\"\x20/>\n\x20\x20<style>\n\x20\x20\x20\x20/\*\x20Tema\x20i
+SF:nstitucional\x20Mejoland:\x20verde\x20profundo\x20\+\x20dorado\x20sobre
+SF:\x20crema,\x20tipografia\x20serif\x20en\x20titulos\x20\*/\n\x20\x20\x20
+SF:\x20:root\x20{\x20--verde:#14532A;\x20--verde-2:#1B6B37;\x20--verde-osc
+SF::#0D3A")%r(SSLSessionReq,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nConn
+SF:ection:\x20close\r\n\r\n")%r(TLSSessionReq,2F,"HTTP/1\.1\x20400\x20Bad\
+SF:x20Request\r\nConnection:\x20close\r\n\r\n");
+
+Nmap scan report for damian-1.tailae692e.ts.net. (100.93.52.67)
+Host is up (0.14s latency).
+Not shown: 195 closed tcp ports (conn-refused)
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     OpenSSH 10.0p2 (protocol 2.0)
+53/tcp   open  domain  (unknown banner: no disponible)
+389/tcp  open  ldap    OpenLDAP 2.2.X - 2.3.X
+3001/tcp open  nessus?
+3306/tcp open  mysql   MariaDB 11.8.6
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port3001-TCP:V=7.993%I=2%D=11/18%Time=6AFE0103%P=i686-pc-windows-window
+SF:s%r(NCP,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\
+SF:r\n\r\n")%r(GetRequest,18FD,"HTTP/1\.1\x20200\x20OK\r\nX-Content-Type-O
+SF:ptions:\x20nosniff\r\nX-Frame-Options:\x20DENY\r\nReferrer-Policy:\x20n
+SF:o-referrer\r\nAccept-Ranges:\x20bytes\r\nCache-Control:\x20public,\x20m
+SF:ax-age=0\r\nLast-Modified:\x20Sun,\x2008\x20Nov\x202026\x2017:30:19\x20
+SF:GMT\r\nETag:\x20W/\"1a799-1a1bc3606ef\"\r\nContent-Type:\x20text/html;\
+SF:x20charset=utf-8\r\nContent-Length:\x20108441\r\nDate:\x20Wed,\x2018\x2
+SF:0Nov\x202026\x2019:48:25\x20GMT\r\nConnection:\x20close\r\n\r\n<!DOCTYP
+SF:E\x20html>\n<html\x20lang=\"es\">\n<head>\n\x20\x20<meta\x20charset=\"U
+SF:TF-8\"\x20/>\n\x20\x20<meta\x20name=\"viewport\"\x20content=\"width=dev
+SF:ice-width,\x20initial-scale=1\.0\"\x20/>\n\x20\x20<title>EduNova\x20\xc
+SF:2\xb7\x20Centro\x20Educativo\x20Mejoland</title>\n\x20\x20<link\x20rel=
+SF:\"icon\"\x20href=\"logo\.jpg\"\x20/>\n\x20\x20<!--\x20Estilos\x20Tailwi
+SF:nd\x20ya\x20compilados\x20\(17\x20KB,\x20sin\x20internet\x20ni\x20JavaS
+SF:cript\x20extra\)\x20-->\n\x20\x20<link\x20rel=\"stylesheet\"\x20href=\"
+SF:estilos\.css\"\x20/>\n\x20\x20<style>\n\x20\x20\x20\x20/\*\x20Tema\x20i
+SF:nstitucional\x20Mejoland:\x20verde\x20profundo\x20\+\x20dorado\x20sobre
+SF:\x20crema,\x20tipografia\x20serif\x20en\x20titulos\x20\*/\n\x20\x20\x20
+SF:\x20:root\x20{\x20--verde:#14532A;\x20--verde-2:#1B6B37;\x20--verde-osc
+SF::#0D3A")%r(SSLSessionReq,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nConn
+SF:ection:\x20close\r\n\r\n")%r(TLSSessionReq,2F,"HTTP/1\.1\x20400\x20Bad\
+SF:x20Request\r\nConnection:\x20close\r\n\r\n");
+
+Nmap scan report for correo.tailae692e.ts.net. (100.65.119.48)
+Host is up (0.15s latency).
+Not shown: 193 closed tcp ports (conn-refused)
+PORT    STATE SERVICE  VERSION
+22/tcp  open  ssh      OpenSSH 10.0p2 (protocol 2.0)
+25/tcp  open  smtp
+80/tcp  open  http     Apache httpd 2.4.69 ((Debian))
+143/tcp open  imap     Dovecot imapd
+443/tcp open  ssl/http Apache httpd 2.4.69
+587/tcp open  smtp     Postfix smtpd
+993/tcp open  ssl/imap Dovecot imapd
+Service Info: Host: mejoland.edu.ec
+
+Nmap scan report for srv-aaa-1.tailae692e.ts.net. (100.75.163.23)
+Host is up (0.15s latency).
+Not shown: 199 closed tcp ports (conn-refused)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 10.0p2 (protocol 2.0)
+
+Nmap scan report for srv-aaa-2.tailae692e.ts.net. (100.74.49.76)
+Host is up (0.15s latency).
+Not shown: 199 closed tcp ports (conn-refused)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 10.0p2 (protocol 2.0)
+
+Nmap scan report for srv-monitoreo.tailae692e.ts.net. (100.123.222.5)
+Host is up (0.15s latency).
+Not shown: 197 closed tcp ports (conn-refused), 1 filtered tcp port (no-response)
+Some closed ports may be reported as filtered due to --defeat-rst-ratelimit
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 10.0p2 (protocol 2.0)
+80/tcp open  http    Apache httpd 2.4.69 ((Debian))
+
+Nmap scan report for srv-apps.tailae692e.ts.net. (100.107.96.3)
+Host is up (0.15s latency).
+Not shown: 197 closed tcp ports (conn-refused), 1 filtered tcp port (no-response)
+Some closed ports may be reported as filtered due to --defeat-rst-ratelimit
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 10.0p2 (protocol 2.0)
+80/tcp open  http    Apache httpd 2.4.69 ((Debian))
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Wed Nov 18 14:48:53 2026 -- 7 IP addresses (7 hosts up) scanned in 44.80 seconds

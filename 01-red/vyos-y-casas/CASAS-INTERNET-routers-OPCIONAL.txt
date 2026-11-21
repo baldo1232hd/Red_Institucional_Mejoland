@@ -1,0 +1,52 @@
+=====================================================================
+ CASAS -> COLEGIO POR INTERNET (opcional)
+ Publica el proxy del correo (192.168.60.10) como 10.1.60.10 y hace que
+ el "ISP" (MikroTik) resuelva mejoland.edu.ec para las casas.
+ Orden: R1, R3, MikroTik, routers caseros, y al final casas-internet.sh en CORREO.
+=====================================================================
+
+--- R1 (borde principal)   enable / configure terminal, y pegar: ---
+ip nat inside source static 192.168.60.10 10.1.60.10
+ip route 10.1.60.10 255.255.255.255 Null0 track 1
+ip prefix-list SALIDA-ISP seq 20 permit 10.1.60.10/32
+router bgp 65004
+ network 10.1.60.10 mask 255.255.255.255
+end
+write memory
+
+--- R3 (borde de respaldo)   exactamente lo mismo: ---
+ip nat inside source static 192.168.60.10 10.1.60.10
+ip route 10.1.60.10 255.255.255.255 Null0 track 1
+ip prefix-list SALIDA-ISP seq 20 permit 10.1.60.10/32
+router bgp 65004
+ network 10.1.60.10 mask 255.255.255.255
+end
+write memory
+
+  Comprobar en R1/R3:  show ip nat translations | include 60.10
+                       show ip bgp | include 10.1.60.10
+
+--- MikroTik ISP-A (una linea a la vez) ---
+/ip dns static add name=mejoland.edu.ec address=10.1.60.10 comment="Colegio (proxy)"
+/ip dns static add name=www.mejoland.edu.ec address=10.1.60.10
+/ip firewall filter add chain=forward action=accept connection-state=new dst-address=10.1.60.10 dst-limit=100,200,src-address/1m40s comment="DDoS: proxy colegio" place-before=[find comment="DDoS: descarte"]
+/ip firewall filter add chain=forward action=add-src-to-address-list connection-state=new dst-address=10.1.60.10 address-list=ddos-bloqueados address-list-timeout=10m comment="DDoS: proxy excedido" place-before=[find comment="DDoS: descarte"]
+/ip firewall filter add chain=forward action=drop connection-state=new dst-address=10.1.60.10 comment="DDoS: descarte proxy"
+
+  Comprobar:  /ip route print where dst-address=10.1.60.10/32     (debe llegar por BGP)
+              /ip dns static print
+
+--- Routers caseros: cambiar el DNS de la WAN (menu web) ---
+Casa 1 LB-Link   DNS 10.0.3.1
+Casa 2 LB-Link   DNS 10.0.2.1
+Casa 3 TP-Link   DNS 10.1.50.1
+  El MikroTik reenvia lo demas a 8.8.8.8, asi que Internet real sigue funcionando.
+  En el celular: desactivar y activar el Wi-Fi para que tome el DNS.
+
+--- CORREO (root) ---
+bash casas-internet.sh
+
+--- Prueba desde el celular en la casa ---
+https://mejoland.edu.ec/plataforma/     (aviso de certificado: Avanzado -> Continuar)
+Si el DNS aun no cambia:  https://10.1.60.10/plataforma/
+Deben verse: Correo, GLPI, Nube. NO deben verse: Secretaria, LAM, Zabbix.

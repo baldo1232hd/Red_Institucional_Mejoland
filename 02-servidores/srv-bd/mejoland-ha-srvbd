@@ -1,0 +1,55 @@
+#!/bin/bash
+# =====================================================================
+#  mejoland-ha (SRV-BD) - servidor PRINCIPAL
+#    estado         muestra el estado actual
+#    vigilar        (temporizador cada 10 s) si damian-1 tomo el control, SRV-BD se aparta solo
+#    regresar C     paso 2 del regreso: copia los datos de damian-1 y vuelve a ser principal
+#    limpiar        ultimo paso del regreso: borra el acceso temporal
+# =====================================================================
+set -u
+. /etc/mejoland-ha/ha.conf          # RESPALDO_TS, SVC
+D=/var/lib/mejoland-ha; mkdir -p $D
+ESTADO=$(cat $D/estado 2>/dev/null || echo NORMAL)
+log() { echo "$(date '+%F %T') $*" | tee -a /var/log/mejoland-ha.log; logger -t mejoland-ha "$*"; }
+MON="--defaults-extra-file=/etc/mejoland-ha/monitor.cnf"
+respaldo_promovido() { [ "$(timeout 4 mysql $MON -h "$RESPALDO_TS" -N -e 'SELECT @@read_only' 2>/dev/null)" = "0" ]; }
+
+case "${1:-estado}" in
+  estado)
+    echo "Estado de SRV-BD: $ESTADO"
+    echo "MariaDB read_only=$(mysql -N -e 'SELECT @@read_only')   EduNova: $(systemctl is-active lms)"
+    echo -n "damian-1: "; R=$(timeout 4 mysql $MON -h "$RESPALDO_TS" -N -e 'SELECT @@read_only' 2>/dev/null); \
+      case "$R" in 1) echo "en espera (replica)";; 0) echo "AL MANDO (promovido)";; *) echo "no responde";; esac
+    tail -5 /var/log/mejoland-ha.log 2>/dev/null ;;
+  vigilar)
+    [ "$ESTADO" = "NORMAL" ] || exit 0
+    if respaldo_promovido; then
+      log "CERCO: damian-1 esta al mando; SRV-BD deja de atender para no tener dos principales"
+      tailscale serve drain "$SVC"; systemctl stop lms
+      mysql -e "SET GLOBAL read_only=1"
+      echo CERCADO > $D/estado
+    fi ;;
+  regresar)
+    CL=${2:-}; [ -n "$CL" ] || { echo "Uso: mejoland-ha regresar CLAVE (la muestra damian-1 en 'preparar-regreso')"; exit 1; }
+    [ "$ESTADO" = "CERCADO" ] || { echo "SRV-BD no esta cercado (estado $ESTADO); nada que regresar."; exit 1; }
+    CNF=$(mktemp); chmod 600 "$CNF"; trap 'rm -f "$CNF"' EXIT
+    printf '[client]\nhost=%s\nuser=ha_volcado\npassword=%s\n' "$RESPALDO_TS" "$CL" > "$CNF"
+    DBS=$(mysql --defaults-extra-file="$CNF" -N -e "SHOW DATABASES" | grep -vE '^(mysql|information_schema|performance_schema|sys)$' | tr '\n' ' ')
+    [ -n "$DBS" ] || { echo "No puedo conectarme a damian-1 con esa clave."; exit 1; }
+    BK=/root/proyecto/antes-de-regresar-$(date +%Y%m%d-%H%M); mkdir -p "$BK"; chmod 700 "$BK"
+    mariadb-dump --single-transaction --routines --triggers --events --databases $DBS > "$BK/srvbd-antes.sql" 2>/dev/null
+    log "REGRESO paso 2: copiando a SRV-BD los datos de damian-1 (respaldo previo en $BK)"
+    mariadb-dump --defaults-extra-file="$CNF" --single-transaction --routines --triggers --events --databases $DBS | mysql \
+      || { log "ERROR copiando desde damian-1; SRV-BD sigue cercado"; exit 1; }
+    mysql -e "SET GLOBAL read_only=0"; systemctl start lms
+    tailscale serve advertise "$SVC"
+    echo NORMAL > $D/estado
+    log "SRV-BD vuelve a ser el PRINCIPAL"
+    CL2=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+    mysql -e "DROP USER IF EXISTS 'volcado'@'$RESPALDO_TS'; CREATE USER 'volcado'@'$RESPALDO_TS' IDENTIFIED BY '$CL2';
+      GRANT SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES, RELOAD, BINLOG MONITOR, PROCESS ON *.* TO 'volcado'@'$RESPALDO_TS';"
+    echo; echo "Ahora en damian-1 (root):  mejoland-ha volver-a-replica $CL2" ;;
+  limpiar)
+    mysql -e "DROP USER IF EXISTS 'volcado'@'$RESPALDO_TS'" && echo "Acceso temporal borrado. Regreso terminado." ;;
+  *) sed -n '3,8p' "$0"; exit 1 ;;
+esac

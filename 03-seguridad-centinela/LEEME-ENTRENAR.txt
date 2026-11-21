@@ -1,0 +1,14 @@
+ENTRENAR EL LLM Y EL ML - Centinela Mejoland (en la TUF)
+
+1) Copiar centinela.py y Modelfile a C:\centinela\centinela (reemplazar centinela.py).
+2) En PowerShell:
+     cd C:\centinela\centinela
+     ollama create mejoland-analista -f Modelfile
+     ollama run mejoland-analista --think=false "Que es lo normal en la VLAN de estudiantes?"
+3) Abrir iniciar-centinela.bat con el Bloc de notas y cambiar:
+     set CENTINELA_MODELO=qwen3:8b   ->   set CENTINELA_MODELO=mejoland-analista
+4) Cerrar la ventana de Centinela y ejecutar:  Start-ScheduledTask -TaskName "Centinela Mejoland"
+5) http://127.0.0.1:8800/salud  debe indicar la version de "centinela" y "modelo_llm":"mejoland-analista".
+
+ML con trafico real: cuando los sensores lleven unos dias enviando datos,
+en http://127.0.0.1:8800/docs -> POST /entrenar -> x-token (token.txt) -> Execute.

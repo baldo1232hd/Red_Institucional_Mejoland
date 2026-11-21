@@ -1,0 +1,124 @@
+{
+  "_ayuda": "url = enlace dentro del colegio / por la VPN.  url_publica = ruta que ven las casas por el proxy; sin url_publica no se muestra desde Internet.  Lo genera modo-lab / modo-casa (modo casa).",
+  "servicios": [
+    {
+      "id": "correo",
+      "nombre": "Correo institucional",
+      "descripcion": "Bandeja de entrada @mejoland.edu.ec. Usuario y clave institucional.",
+      "icono": "correo",
+      "url": "http://100.65.119.48/roundcube/",
+      "roles": [
+        "admin",
+        "teacher",
+        "student",
+        "secretary"
+      ],
+      "grupos": [],
+      "url_publica": "/webmail/"
+    },
+    {
+      "id": "nube",
+      "nombre": "Nube de archivos (Nextcloud)",
+      "descripcion": "Tus archivos del colegio. Entra con tu usuario institucional.",
+      "icono": "archivos",
+      "roles": [
+        "admin",
+        "teacher",
+        "student",
+        "secretary"
+      ],
+      "grupos": [],
+      "url": "https://100.65.119.48/nube/",
+      "url_publica": "/nube/"
+    },
+    {
+      "id": "glpi",
+      "nombre": "Mesa de ayuda e inventario (GLPI)",
+      "descripcion": "Reporta problemas y consulta el inventario de equipos.",
+      "icono": "enlace",
+      "roles": [
+        "admin",
+        "teacher",
+        "secretary"
+      ],
+      "grupos": [],
+      "url": "https://100.65.119.48/glpi/",
+      "url_publica": "/glpi/"
+    },
+    {
+      "id": "imprimir",
+      "nombre": "Enviar a imprimir",
+      "descripcion": "Sube un PDF o una imagen; se envía a la impresora libre con menos cola (cupo diario).",
+      "icono": "impresora",
+      "url": "app:imprimir",
+      "roles": [
+        "admin",
+        "teacher",
+        "student",
+        "secretary"
+      ],
+      "grupos": []
+    },
+    {
+      "id": "biblioteca",
+      "nombre": "Biblioteca institucional",
+      "descripcion": "Reglamentos, circulares, calendario, formatos y material de estudio. Cada uno ve lo que le corresponde según su rol y sus cursos.",
+      "icono": "biblioteca",
+      "url": "app:biblioteca",
+      "roles": [
+        "admin",
+        "secretary",
+        "teacher",
+        "student"
+      ],
+      "grupos": []
+    },
+    {
+      "id": "impresion",
+      "nombre": "Impresoras (control)",
+      "descripcion": "Estado de las impresoras, cola e historial de impresiones.",
+      "icono": "monitoreo",
+      "url": "app:impresion",
+      "roles": [
+        "admin"
+      ],
+      "grupos": [
+        "admins-red"
+      ]
+    },
+    {
+      "id": "secretaria",
+      "nombre": "Panel de Secretaría",
+      "descripcion": "Altas de cuentas, restablecer contraseñas y fichas.",
+      "icono": "secretaria",
+      "url": "https://srv-bd.tailae692e.ts.net/secretaria/",
+      "roles": [
+        "admin",
+        "secretary"
+      ],
+      "grupos": []
+    },
+    {
+      "id": "lam",
+      "nombre": "Directorio LDAP (LAM)",
+      "descripcion": "Administración del directorio de cuentas y grupos.",
+      "icono": "ldap",
+      "url": "https://srv-bd.tailae692e.ts.net/lam/",
+      "roles": [],
+      "grupos": [
+        "admins-red"
+      ]
+    },
+    {
+      "id": "monitoreo",
+      "nombre": "Monitoreo de la red (Zabbix)",
+      "descripcion": "Estado de servidores y equipos de red.",
+      "icono": "monitoreo",
+      "url": "http://100.123.222.5/zabbix/",
+      "roles": [],
+      "grupos": [
+        "admins-red"
+      ]
+    }
+  ]
+}

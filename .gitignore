@@ -1,0 +1,37 @@
+# Claves y tokens: NUNCA al repositorio
+claves.env
+*.env
+!claves.ejemplo.env
+token.txt
+claves*.txt
+*.key
+*.pem
+*.crt
+*.p12
+
+# Respaldos y capturas de los servidores (pueden tener datos reales)
+*.tar.gz
+*.tgz
+capturado/
+capturas/
+final-*/
+
+# Documentos, imagenes y archivos pesados (van en la guia, no aqui)
+*.docx
+*.pdf
+*.pptx
+*.png
+*.jpg
+*.jpeg
+*.zip
+# Excepcion: imagenes de la interfaz de EduNova (logo y fotos institucionales)
+!02-servidores/edunova/frontend/*.jpg
+!02-servidores/edunova/frontend/img/*.jpg
+
+# Sistema y entornos
+__pycache__/
+*.pyc
+venv/
+node_modules/
+.DS_Store
+Thumbs.db

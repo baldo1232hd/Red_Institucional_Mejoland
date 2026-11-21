@@ -1,0 +1,86 @@
+! =====================================================================
+!  SWdistri1  SOLO CAPA 2 (nucleo colapsado)
+!  Switch Cisco C1000 (puertos Gi1/0/x, encapsulacion 802.1Q).
+!  Solo conmutacion: el ruteo entre VLAN, HSRP, DHCP y OSPF lo realizan R1 y R3.
+!  Antes de aplicar:  enable / write erase / delete flash:vlan.dat / reload
+!
+!   Gi1/0/1        -> R1 Gi0/0           TRONCAL (todas las VLAN)
+!   Gi1/0/2        -> SW-ACC-ADMIN         troncal
+!   Gi1/0/3        -> SW-ACC-DOCENTES      troncal
+!   Gi1/0/4        -> SW-ACC-ESTUDIANTES   troncal
+!   Gi1/0/7-8    -> SWdistri2            EtherChannel Po1 (L2)
+!   Gi1/0/11       -> srv-bd 192.168.40.10     acceso VLAN 40
+!   Gi1/0/12       -> srv-aaa-1 192.168.40.11  acceso VLAN 40
+!   Gi1/0/13       -> correo 192.168.60.10     acceso VLAN 60 (DMZ)
+! =====================================================================
+enable
+configure terminal
+hostname SWdistri1
+no ip routing
+no ip domain lookup
+vtp mode transparent
+spanning-tree mode rapid-pvst
+vlan 10
+ name ADMINISTRACION
+vlan 20
+ name DOCENTES
+vlan 30
+ name ESTUDIANTES
+vlan 40
+ name SERVIDORES
+vlan 50
+ name GESTION
+vlan 60
+ name DMZ
+vlan 100
+ name TRANSITO-OSPF
+exit
+spanning-tree vlan 10,20,40,100 priority 24576
+spanning-tree vlan 30,50,60 priority 28672
+
+interface GigabitEthernet1/0/1
+ description R1 Gi0/0 (troncal: todas las VLAN)
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40,50,60,100
+ switchport nonegotiate
+ no shutdown
+interface range GigabitEthernet1/0/2 - 4
+ description troncal a switches de acceso
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,50
+ switchport nonegotiate
+ no shutdown
+interface range GigabitEthernet1/0/7 - 8
+ description EtherChannel a SWdistri2
+ switchport mode trunk
+ channel-group 1 mode active
+ no shutdown
+interface Port-channel1
+ switchport mode trunk
+interface GigabitEthernet1/0/11
+ description srv-bd 192.168.40.10
+ switchport mode access
+ switchport access vlan 40
+ spanning-tree portfast
+ no shutdown
+interface GigabitEthernet1/0/12
+ description srv-aaa-1 192.168.40.11
+ switchport mode access
+ switchport access vlan 40
+ spanning-tree portfast
+ no shutdown
+interface GigabitEthernet1/0/13
+ description correo 192.168.60.10 (DMZ)
+ switchport mode access
+ switchport access vlan 60
+ spanning-tree portfast
+ no shutdown
+
+! ===== Solo una IP para administrar el switch (Capa 2) =====
+interface Vlan50
+ description Gestion del switch
+ ip address 192.168.50.4 255.255.255.0
+ no shutdown
+ip default-gateway 192.168.50.1
+end
+write memory

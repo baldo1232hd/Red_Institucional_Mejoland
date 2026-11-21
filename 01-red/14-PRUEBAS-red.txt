@@ -1,0 +1,43 @@
+=====================================================================
+ PRUEBAS DE LA RED
+ Primero las de funcionamiento y luego las de caida.
+=====================================================================
+
+--- 1. Que cada pieza este arriba ---
+MikroTik:   /routing bgp session print          -> 4 sesiones "established" (R1, R3, R4, R5)
+R4 y R5:    show ip bgp summary                 -> 3 vecinos con numero en la ultima columna
+R1 y R3:    show ip bgp summary                 -> 2 vecinos (MikroTik y su otro ISP)
+R1 y R3:    show ip route 0.0.0.0               -> "Known via bgp 65004", por 10.1.1.1 (R1) / 10.1.3.1 (R3)
+R1 y R3:    show standby brief                  -> R1 "Active" en 10,20,40; R3 en 30,50,60
+R1 y R3:    show ip ospf neighbor               -> el otro borde en FULL por la VLAN 100
+R1 y R3:    show ip dhcp binding                -> las PCs que pidieron IP
+SWdistri:   show etherchannel summary           -> Po1 con Gi1/0/7 y Gi1/0/8 (P)
+
+--- 2. Funcionamiento (desde los VPCS) ---
+PC5:  ping 192.168.40.10        -> responde (usuario a servidor)
+PC9:  ping 192.168.100.1        -> responde (colegio sale a "Internet" por PAT)
+PC13: ping 10.1.40.13           -> responde (casa 3 llega al servidor publicado)
+PC14: ping 10.1.40.13           -> responde (casa 1, entra por R4)
+PC13: ping 192.168.40.13        -> NO responde (correcto: IP privada)
+PC5:  ping 192.168.1.1          -> NO responde (correcto: red interna de una casa)
+MikroTik: /ip route print where dst-address~"192.168"
+                                -> solo 192.168.100 y 192.168.200 (las casas); nada del colegio
+
+--- 3. Caidas ---
+Importante: el destino del ping no debe estar en el equipo apagado ni detras de el.
+  - 192.168.100.1 es R4 (casa 1)  -> no sirve para probar R4 ni SW-NUBE-A
+  - 192.168.200.1 es R5 (casa 2)  -> no sirve para probar R5 ni SW-NUBE-B
+  - PC13 (casa 3) cuelga del MikroTik -> cae al apagar el MikroTik (esperado)
+
+Apaga (apagar o desconectar)   Ping que debe SEGUIR (tras unos segundos)          Ping que cae (esperado)
+MikroTik       PC9 -> 192.168.100.1 y PC14 -> 10.1.40.13           PC13 (casa 3)
+SW-NUBE-A      PC9 -> 192.168.200.1 y PC13 -> 10.1.40.13           todo lo de R4 (casa 1)
+SW-NUBE-B      PC9 -> 192.168.100.1 y PC13 -> 10.1.40.13           todo lo de R5 (casa 2)
+R4             PC9 -> 192.168.200.1 y PC13 -> 10.1.40.13           casa 1
+R5             PC9 -> 192.168.100.1 y PC13 -> 10.1.40.13           casa 2
+R1             PC9 -> 192.168.200.1 y PC13 -> 10.1.40.13           nada (pasa a R3)
+R3             PC9 -> 192.168.100.1 y PC13 -> 10.1.40.13           nada (sigue R1)
+SWdistri1      PC9 -> 192.168.200.1; PC5 "ip dhcp" recibe .128+   nada (HSRP pasa a R3)
+Un cable Po1   cualquiera (desconectarlo fisicamente)                                          nada
+Limite (cae):  R1 + R3; SW-NUBE-A + SW-NUBE-B; un borde con el switch de nube del otro
+Despues de cada prueba: encender el equipo y esperar 1-2 minutos antes de la siguiente.

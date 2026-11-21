@@ -1,0 +1,53 @@
+=====================================================================
+ RED INSTITUCIONAL MEJOLAND - GUIA DE APLICACION
+=====================================================================
+Equipos: 4 routers Cisco ISR (R1, R3, R4, R5), 7 switches Cisco (SW-NUBE-A, SW-NUBE-B,
+SWdistri1, SWdistri2 y 3 de acceso), MikroTik CCR2004 (ISP-A), VyOS virtualizado
+(salida a Internet) y tres routers domesticos (Casa 1, Casa 2 y Casa 3).
+
+ARQUITECTURA
+  Campus con nucleo colapsado: R1 y R3 hacen borde y distribucion (ruteo entre VLAN,
+  HSRP, DHCP, OSPF, NAT/PAT y BGP AS 65004). SWdistri1 y SWdistri2 trabajan solo en
+  capa 2 (VLAN, troncales, EtherChannel y STP).
+  Nube emulada: MikroTik ISP-A (AS 65001), R5 ISP-B (AS 65002) y R4 ISP-C (AS 65003).
+
+  HSRP (reparto de carga)
+    R1 activo en VLAN 10, 20 y 40   (R3 de respaldo)
+    R3 activo en VLAN 30, 50 y 60   (R1 de respaldo)
+  DHCP (rango partido, redundante; solo VLAN 10, 20 y 30)
+    R1 entrega .10 a .127   |   R3 entrega .128 a .254
+  Publicacion: NAT estatico 192.168.60.10 (proxy de la DMZ) = 10.1.40.13, solo 80 y 443.
+
+ORDEN DE APLICACION
+  1. Cablear segun la tabla siguiente y la cabecera de cada archivo.
+  2. En cada equipo Cisco, dejar la configuracion en blanco:
+       enable / write erase / delete flash:vlan.dat (solo switches) / reload
+  3. Aplicar 00-seguridad-ssh-comun.txt y luego los archivos 01 a 11, por bloques.
+  4. MikroTik: archivo 12, una linea a la vez.
+  5. VyOS y routers domesticos: archivo 13.
+  6. Esperar 1-2 minutos y ejecutar 14-PRUEBAS-red.txt.
+
+CABLEADO (puerto -> puerto)
+  MikroTik ether5          -> Vivobook (VyOS, salida a Internet)
+  MikroTik ether6          -> SW-NUBE-A Gi0/1
+  MikroTik ether7          -> SW-NUBE-B Gi0/1
+  MikroTik ether8          -> Casa 3 (WAN)
+  SW-NUBE-A Fa0/1          -> R4 Gi0/0/0
+  SW-NUBE-A Fa0/2          -> R1 Gi0/0/1
+  SW-NUBE-B Fa0/1          -> R5 Gi0/0/0
+  SW-NUBE-B Fa0/2          -> R3 Gi0/0/1
+  SW-NUBE-A Gi0/2          -> SW-NUBE-B Gi0/2
+  R4 Gi0/0/1               -> Casa 1 (WAN)
+  R5 Gi0/0/1               -> Casa 2 (WAN)
+  R1 Gi0/0/0               -> SWdistri1 Gi1/0/1     (troncal, todas las VLAN)
+  R3 Gi0/0/0               -> SWdistri2 Gi1/0/1     (troncal, todas las VLAN)
+  SWdistri1 Gi1/0/7-8      -> SWdistri2 Gi1/0/7-8   (EtherChannel Po1; une los dominios de HSRP)
+  SWdistri1 Gi1/0/2,3,4    -> Gi0/1 de SW-ACC-ADMIN, DOCENTES, ESTUDIANTES
+  SWdistri2 Gi1/0/2,3,4    -> Gi0/2 de SW-ACC-ADMIN, DOCENTES, ESTUDIANTES
+  SWdistri1 Gi1/0/11,12,13 -> srv-bd, srv-aaa-1, correo
+  SWdistri2 Gi1/0/10,11    -> damian, MacBook (VMs)
+
+ADAPTACION A OTROS EQUIPOS
+  - Si los numeros de puerto difieren, respetar la funcion de cada puerto.
+  - Si un switch rechaza "switchport trunk encapsulation dot1q", omitir la linea.
+  - Si los Gi0/1-2 de un 2960 son SFP sin modulo, usar Fa0/23-24 para los troncales.

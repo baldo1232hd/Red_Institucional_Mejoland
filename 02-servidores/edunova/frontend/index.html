@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduNova · Centro Educativo Mejoland</title>
+  <link rel="icon" href="logo.jpg" />
+  <!-- Estilos Tailwind ya compilados (17 KB, sin internet ni JavaScript extra) -->
+  <link rel="stylesheet" href="estilos.css" />
+  <style>
+    /* Tema institucional Mejoland: verde profundo + dorado sobre crema, tipografia serif en titulos */
+    :root { --verde:#14532A; --verde-2:#1B6B37; --verde-osc:#0D3A1D; --dorado:#C9A227; --dorado-claro:#F3E7BE; --crema:#F7F4EC; --linea:#E6E0D2; --tinta:#1F2A24; --suave:#5F6B63; }
+    * { scrollbar-width: thin; scrollbar-color: #b9c3bc transparent; }
+    body { background: var(--crema); color: var(--tinta); font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
+    h1, h2, h3, .serif { font-family: Georgia, "Times New Roman", Cambria, serif; font-weight: 700; letter-spacing: -.005em; }
+    .fade-in { animation: fadeIn .25s ease both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .inp { width: 100%; border: 1px solid #D8D2C3; background: #FCFBF8; padding: .65rem .9rem; outline: none; border-radius: .6rem; transition: .15s; }
+    .inp:focus { border-color: var(--verde-2); background: #fff; box-shadow: 0 0 0 4px rgba(27,107,55,.12); }
+    .inp:disabled { background: #EFECE4; color: #777; }
+    .lbl { display: block; margin-bottom: .35rem; font-size: .8rem; font-weight: 600; color: #3C4741; }
+    .btn { border-radius: .6rem; padding: .6rem 1.05rem; font-weight: 600; font-size: .875rem; transition: .15s; border: 1px solid transparent; }
+    .btn:disabled { opacity: .55; }
+    .btn-p { background: var(--verde); color: #fff; box-shadow: 0 1px 2px rgba(13,58,29,.25); } .btn-p:hover { background: var(--verde-osc); }
+    .btn-s { background: #fff; border-color: var(--linea); color: var(--tinta); } .btn-s:hover { background: #F4F1E8; }
+    .btn-d { background: #fff; border-color: #F1C9C9; color: #A11D1D; } .btn-d:hover { background: #FDF1F1; }
+    .card { background: #fff; border: 1px solid var(--linea); border-radius: 1rem; box-shadow: 0 1px 2px rgba(31,42,36,.04), 0 8px 24px rgba(31,42,36,.05); }
+    .chip { display: inline-block; border-radius: 999px; padding: .12rem .55rem; font-size: .7rem; font-weight: 600; }
+    table.tbl { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .tbl th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--suave); padding: .65rem .75rem; background: #F8F6F0; border-bottom: 1px solid var(--linea); }
+    .tbl td { padding: .65rem .75rem; border-bottom: 1px solid #EFEBE1; vertical-align: top; }
+    pre.txt { white-space: pre-wrap; word-break: break-word; font-family: inherit; }
+    .sello { background: #fff; border-radius: 999px; box-shadow: 0 0 0 3px rgba(201,162,39,.55), 0 4px 14px rgba(0,0,0,.18); }
+    .nav-on { background: rgba(255,255,255,.12); color: #fff; box-shadow: inset 3px 0 0 var(--dorado); }
+    .nav-off { color: rgba(255,255,255,.78); } .nav-off:hover { background: rgba(255,255,255,.07); color: #fff; }
+    .regla-dorada { height: 3px; width: 56px; background: var(--dorado); border-radius: 3px; }
+  </style>
+  </style>
+</head>
+<body class="min-h-screen text-slate-800">
+  <div id="app"></div>
+  <div id="modal"></div>
+
+  <script>
+  /*
+    EduNova LMS v3 - interfaz por roles.
+    El navegador solo MUESTRA: cada permiso se vuelve a comprobar en el servidor.
+    Todo texto que viene del servidor pasa por esc() antes de mostrarse.
+  */
+  const API = new URL('api', window.location.href).pathname.replace(/\/$/, '');
+  const INSTITUCION = 'Centro Educativo Mejoland';
+  const logo = (cls = 'h-12 w-12') => `<img src="logo.jpg" alt="Logo ${INSTITUCION}" class="${cls} object-contain" />`;
+  const ROLE_LABEL = { admin: 'Administración', secretary: 'Secretaría', teacher: 'Docente', student: 'Estudiante' };
+  // Auditoria legible: "quien" hizo "que" (el docente asignado aparece en el detalle, no como autor).
+  const ACCION_LABEL = { LOGIN: 'Inició sesión', LOGOUT: 'Cerró sesión', CURSO_CREADO: 'Creó el curso', CURSO_EDITADO: 'Editó el curso', CURSO_ARCHIVADO: 'Archivó el curso', CURSO_REACTIVADO: 'Reactivó el curso', MATRICULA: 'Matriculó', MATRICULA_RETIRADA: 'Retiró de un curso', ANUNCIO: 'Publicó un anuncio', ANUNCIO_BORRADO: 'Borró un anuncio', ACTIVIDAD_CREADA: 'Creó una actividad', ACTIVIDAD_EDITADA: 'Editó una actividad', ACTIVIDAD_BORRADA: 'Borró una actividad', ENTREGA: 'Entregó una actividad', NOTA: 'Registró una nota', PONDERACION: 'Cambió la ponderación', CLAVE_CAMBIADA: 'Cambió su contraseña', CLAVE_ACTUAL_ERRADA: 'Falló cambio de contraseña', SERVICIO: 'Abrió un servicio', IMPRESION: 'Controló una impresora', IMPRESION_ENVIADA: 'Envió a imprimir', IMPRESION_CANCELADA: 'Canceló una impresión', IMPRESORA_AGREGADA: 'Agregó una impresora', IMPRESORA_CONFIG: 'Configuró una impresora', IMPRESORA_QUITADA: 'Quitó una impresora', IMPRESION_VISTA: 'Abrió un documento impreso', IMPRESION_DIFERIDA: 'Dejó un documento en espera de impresión' };
+  const accion = a => esc(ACCION_LABEL[a] || a);
+  const TIPO_LABEL = { tarea: 'Tarea', leccion: 'Lección', proyecto: 'Proyecto', examen: 'Examen parcial', final: 'Examen final' };
+  const TIPO_PLURAL = { tarea: 'Tareas', leccion: 'Lecciones', proyecto: 'Proyectos', examen: 'Exámenes parciales', final: 'Examen final' };
+  const TIPOS = Object.keys(TIPO_LABEL);
+  const n2 = v => v === null || v === undefined ? '—' : Number(v).toFixed(2);
+  /** Chips "Tareas 20 %" con la ponderacion del curso. */
+  const chipsPesos = pesos => TIPOS.filter(t => Number(pesos[t]) > 0).map(t => `<span class="chip bg-indigo-50 text-indigo-700">${TIPO_PLURAL[t]} ${Number(pesos[t])} %</span>`).join(' ');
+  /** Desglose por tipo: peso, promedio /10 y aporte a la nota final. */
+  function desglose(x) {
+    const filas = x.categorias.filter(c => c.peso > 0 || c.actividades > 0);
+    return `<table class="tbl"><thead><tr><th>Componente</th><th>Peso</th><th>Promedio /10</th><th>Aporta</th></tr></thead><tbody>${filas.map(c => `<tr><td>${TIPO_PLURAL[c.tipo]}${c.peso === 0 && c.actividades ? ' <span class="chip bg-amber-50 text-amber-800">no cuenta (0 %)</span>' : ''}</td><td>${c.peso} %</td><td>${c.promedio === null ? '<span class="text-slate-400">sin notas</span>' : `<b>${n2(c.promedio)}</b>`}</td><td>${c.aporte === null ? '—' : n2(c.aporte)}</td></tr>`).join('')}</tbody></table>
+      <p class="mt-2 text-xs text-slate-500">Promedio ponderado con lo evaluado: <b>${n2(x.final)}/10</b> · evaluado ${x.evaluado} % del periodo · acumulado ${n2(x.acumulado)} de 10 puntos posibles.</p>`;
+  }
+  const S = { user: null, route: 'inicio', cursoId: null, tab: 'anuncios', actId: null, data: {}, toast: null, menu: false, busy: false };
+  const $ = s => document.querySelector(s);
+
+  function esc(v = '') { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;'); }
+  function fecha(s) {
+    if (!s) return '—';
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(s);
+    return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : esc(s);
+  }
+  const num = v => (v === null || v === undefined || v === '') ? null : Number(v);
+  const fmtNota = (n, max) => n === null ? '<span class="text-slate-400">—</span>' : `<b>${Number(n).toFixed(2).replace(/\.00$/, '')}</b>${max ? `<span class="text-slate-400">/${Number(max)}</span>` : ''}`;
+  const promChip = p => p === null || p === undefined ? '<span class="chip bg-slate-100 text-slate-500">Sin notas</span>'
+    : `<span class="chip ${p >= 7 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}">${Number(p).toFixed(2)}/10</span>`;
+  const initials = n => (n || '').split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || 'US';
+
+  async function api(method, path, body) {
+    const opt = { method, credentials: 'same-origin', headers: {} };
+    if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+    const res = await fetch(API + path, opt);
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && path !== '/login') { S.user = null; render(); throw new Error('Tu sesión terminó. Vuelve a iniciar sesión.'); }
+    if (!res.ok) throw new Error(data.error || 'No se pudo completar la acción.');
+    return data;
+  }
+  function notify(message, ok = true) {
+    S.toast = { message, ok }; drawToast();
+    clearTimeout(notify.t); notify.t = setTimeout(() => { S.toast = null; drawToast(); }, 3200);
+  }
+  function drawToast() {
+    let el = $('#toast');
+    if (!el) { el = document.createElement('div'); el.id = 'toast'; document.body.appendChild(el); }
+    el.innerHTML = S.toast ? `<div class="fixed bottom-6 right-6 z-[60] max-w-sm rounded-xl border px-5 py-4 text-sm font-medium shadow-xl ${S.toast.ok ? 'bg-white border-[#CFE3D5] text-[#14532A]' : 'bg-red-50 border-red-200 text-red-800'}">${esc(S.toast.message)}</div>` : '';
+  }
+  const icon = (n, c = 'w-5 h-5') => ({
+    home: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>`,
+    book: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/></svg>`,
+    users: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 0 0-5-3.87M9 20H2v-2a4 4 0 0 1 5-3.87m6-4a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm6 0a3 3 0 1 1-6 0"/></svg>`,
+    chart: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg>`,
+    log: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5h11M9 12h11M9 19h11M4 5h.01M4 12h.01M4 19h.01"/></svg>`,
+    user: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21a8 8 0 0 0-16 0m8-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>`,
+    out: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17l5-5-5-5m5 5H9m3 8H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/></svg>`,
+    menu: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>`,
+    grid: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>`,
+    correo: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7l9 6 9-6M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/></svg>`,
+    bd: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Zm0 0v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>`,
+    impresora: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 9V3h10v6M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/></svg>`,
+    secretaria: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>`,
+    ldap: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm-9 14v-1a6 6 0 0 1 12 0v1M19 8v6m3-3h-6"/></svg>`,
+    monitoreo: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 4h18v12H3zM8 20h8m-4-4v4M6 12l3-3 3 2 5-5"/></svg>`,
+    archivos: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>`,
+    wifi: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01"/></svg>`,
+    enlace: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 4h6v6m0-6-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`,
+    biblioteca: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4h3v16H4zM9 4h3v16H9zM14.5 4.6l2.9-.8 3.6 15.6-2.9.8zM3 20h18"/></svg>`,
+    archivo: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Zm0 0v5h5M9 13h6M9 17h4"/></svg>`,
+    back: `<svg class="${c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>`,
+  })[n] || '';
+
+  /* ======================= Navegacion y carga ======================= */
+  const NAV = {
+    admin: [['inicio', 'Resumen', 'home'], ['servicios', 'Servicios', 'grid'], ['cursos', 'Cursos', 'book'], ['usuarios', 'Docentes y estudiantes', 'users'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['imprimir', 'Imprimir', 'impresora'], ['impresion', 'Impresoras', 'monitoreo'], ['auditoria', 'Auditoría', 'log'], ['perfil', 'Mi perfil', 'user']],
+    secretary: [['inicio', 'Resumen', 'home'], ['servicios', 'Servicios', 'grid'], ['cursos', 'Cursos', 'book'], ['usuarios', 'Docentes y estudiantes', 'users'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['imprimir', 'Imprimir', 'impresora'], ['perfil', 'Mi perfil', 'user']],
+    teacher: [['inicio', 'Resumen', 'home'], ['servicios', 'Servicios', 'grid'], ['cursos', 'Mis cursos', 'book'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['imprimir', 'Imprimir', 'impresora'], ['perfil', 'Mi perfil', 'user']],
+    student: [['inicio', 'Resumen', 'home'], ['servicios', 'Servicios', 'grid'], ['cursos', 'Mis cursos', 'book'], ['notas', 'Mis calificaciones', 'chart'], ['biblioteca', 'Biblioteca', 'biblioteca'], ['imprimir', 'Imprimir', 'impresora'], ['perfil', 'Mi perfil', 'user']],
+  };
+  async function go(route, extra = {}) {
+    Object.assign(S, { route, menu: false }, extra);
+    S.data = {}; S.busy = true; render();
+    try {
+      if (route === 'inicio') [S.data.resumen, S.data.servicios] = await Promise.all([api('GET', '/resumen'), api('GET', '/servicios').catch(() => [])]);
+      if (route === 'servicios') S.data.servicios = await api('GET', '/servicios');
+      if (route === 'impresion') S.data.imp = await api('GET', '/impresion');
+      if (route === 'imprimir') S.data.pr = await api('GET', '/imprimir');
+      if (route === 'biblioteca') S.data.bib = await api('GET', '/biblioteca');
+      if (route === 'cursos') S.data.cursos = await api('GET', '/cursos');
+      if (route === 'curso') await loadCurso();
+      if (route === 'actividad') S.data.ent = await api('GET', `/actividades/${S.actId}/entregas`);
+      if (route === 'usuarios') S.data.usuarios = await api('GET', '/usuarios');
+      if (route === 'auditoria') S.data.audit = await api('GET', '/auditoria');
+      if (route === 'notas') S.data.notas = await api('GET', '/mis-notas');
+    } catch (e) { S.data.error = e.message; }
+    S.busy = false; render(); window.scrollTo(0, 0);
+  }
+  async function loadCurso() {
+    S.data.det = await api('GET', `/cursos/${S.cursoId}`);
+    if (S.tab === 'calificaciones' && !['student', 'secretary'].includes(S.data.det.acceso)) S.data.libreta = await api('GET', `/cursos/${S.cursoId}/calificaciones`);
+  }
+  async function reload() { await go(S.route, {}); }
+
+  /* ======================= Vistas ======================= */
+  function loginView() {
+    const mosaico = [['biblioteca', 'En la biblioteca'], ['laboratorio', 'Laboratorio de computación'], ['camino', 'Vida en el campus'], ['clase', 'Trabajo en clase']];
+    return `<main class="min-h-screen grid lg:grid-cols-[1.1fr_1fr]">
+      <section class="relative hidden lg:flex flex-col justify-between overflow-hidden text-white" style="background:linear-gradient(160deg,#0D3A1D 0%,#14532A 55%,#1B6B37 100%)">
+        <img src="logo.jpg" alt="" aria-hidden="true" class="pointer-events-none absolute -right-32 top-1/2 h-[560px] w-[560px] -translate-y-1/2 object-contain opacity-[.22]" style="mix-blend-mode:multiply" />
+        <div class="relative px-12 pt-10 flex items-center gap-4">${logo('h-16 w-16 sello p-0.5')}<div><p class="serif text-2xl leading-tight">${INSTITUCION}</p><p class="text-xs uppercase tracking-[.22em] text-[#E9D48A]">Plataforma educativa EduNova</p></div></div>
+        <div class="relative px-12">
+          <div class="regla-dorada mb-5"></div>
+          <h1 class="text-[2.9rem] leading-[1.1]">Cursos, tareas y calificaciones en un solo lugar.</h1>
+          <p class="mt-5 max-w-lg text-base leading-7 text-white/85">Ingresa con la misma cuenta de tu correo institucional. Lo que ves depende de tu rol: administración, docente o estudiante.</p>
+          <div class="mt-8 grid max-w-xl grid-cols-4 gap-3">${mosaico.map(([f, t]) => `<figure class="overflow-hidden rounded-xl ring-1 ring-white/20 shadow-lg"><img src="img/${f}.jpg" alt="${esc(t)}" class="aspect-[4/5] w-full object-cover" /></figure>`).join('')}</div>
+          <p class="mt-3 text-xs text-white/60">Vida en el campus · ${INSTITUCION}</p>
+        </div>
+        <div class="relative flex items-center justify-between border-t border-white/10 px-12 py-5 text-xs text-white/60"><span>Plataforma institucional · <span class="text-[#E9D48A]">Proyecto local</span></span><span>SRV-BD · OpenLDAP + MariaDB</span></div>
+      </section>
+      <section class="flex items-center justify-center p-6 sm:p-12"><div class="w-full max-w-md">
+        <div class="mb-8 flex items-center gap-3 lg:hidden">${logo('h-14 w-14 sello p-0.5')}<div><p class="serif text-xl text-[#14532A]">${INSTITUCION}</p><p class="text-xs uppercase tracking-widest text-slate-500">Plataforma EduNova</p></div></div>
+        <div class="card p-8 sm:p-10">
+          <h2 class="text-3xl text-[#14532A]">Iniciar sesión</h2>
+          <p class="mt-2 mb-8 text-sm text-slate-500">Es la misma cuenta y contraseña de tu <b class="text-slate-700">correo institucional</b>.</p>
+          <form data-form="login" class="space-y-5">
+            <div><label class="lbl" for="lu">Usuario o correo institucional</label><input id="lu" name="username" required autocomplete="username" class="inp" placeholder="usuario o usuario@mejoland.edu.ec" /></div>
+            <div><label class="lbl" for="lp">Contraseña</label><input id="lp" name="password" required type="password" autocomplete="current-password" class="inp" /></div>
+            <div id="loginError" class="hidden rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"></div>
+            <button class="btn btn-p w-full py-3">Ingresar</button>
+          </form>
+        </div>
+        <p class="mt-6 text-center text-xs text-slate-500">¿Olvidaste tu contraseña? Acude a Secretaría con tu cédula.</p>
+      </div></section></main>`;
+  }
+
+  function layout(content) {
+    const u = S.user;
+    const nav = NAV[u.role].map(([r, label, ic]) => {
+      const on = S.route === r || (r === 'cursos' && ['curso', 'actividad'].includes(S.route));
+      return `<button data-go="${r}" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium ${on ? 'nav-on' : 'nav-off'}">${icon(ic)} ${label}</button>`;
+    }).join('');
+    return `<div class="min-h-screen">
+      <header class="fixed inset-x-0 top-0 z-30 h-16 border-b border-[#E6E0D2] bg-white/95 backdrop-blur">
+        <div class="flex h-full items-center justify-between px-4 lg:pl-72 lg:pr-8">
+          <button data-act="menu" class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden">${icon('menu')}</button>
+          <div class="hidden sm:flex items-center gap-3 text-sm text-slate-500"><span class="serif text-base text-[#14532A]">${INSTITUCION}</span><span class="h-4 w-px bg-slate-300"></span><span>Periodo lectivo 2026-2027</span></div>
+          <div class="flex items-center gap-3"><div class="text-right"><p class="text-sm font-semibold text-slate-800">${esc(u.nombre)}</p><p class="text-xs text-slate-500">${ROLE_LABEL[u.role]}</p></div>
+            <div class="grid h-10 w-10 place-items-center rounded-full bg-[#14532A] text-sm font-semibold text-white ring-2 ring-[#C9A227]">${esc(initials(u.nombre))}</div></div>
+        </div>
+      </header>
+      <aside class="fixed bottom-0 left-0 top-0 z-40 w-64 p-4 text-white transition-transform ${S.menu ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}" style="background:linear-gradient(180deg,#0D3A1D 0%,#14532A 100%)">
+        <div class="mb-8 flex items-center gap-3 px-1 pt-1">${logo('h-12 w-12 sello p-0.5')}<div class="leading-tight"><p class="serif text-lg">EduNova</p><p class="text-[11px] uppercase tracking-wider text-[#E9D48A]">${INSTITUCION}</p></div></div>
+        <nav class="space-y-1">${nav}</nav>
+        <div class="absolute bottom-5 left-4 right-4"><button data-act="logout" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white">${icon('out')} Cerrar sesión</button></div>
+      </aside>
+      <main class="px-4 pb-16 pt-24 sm:px-6 lg:ml-64 lg:px-10"><div class="mx-auto max-w-6xl fade-in">${content}</div></main>
+    </div>`;
+  }
+  const header = (title, sub, actions = '') => `<div class="mb-6 flex flex-wrap items-end justify-between gap-4"><div><h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">${title}</h1>${sub ? `<p class="mt-1 text-sm text-slate-500">${sub}</p>` : ''}</div><div class="flex flex-wrap gap-2">${actions}</div></div>`;
+  const stat = (label, value, sub = '') => `<div class="card p-5"><p class="text-xs font-bold uppercase tracking-wider text-slate-500">${label}</p><p class="mt-2 text-3xl font-black text-slate-900">${value}</p>${sub ? `<p class="mt-1 text-xs text-slate-500">${sub}</p>` : ''}</div>`;
+  const empty = t => `<div class="card p-8 text-center text-sm text-slate-500">${t}</div>`;
+
+  /** Portada del panel principal: saludo sobre verde institucional con una foto de la comunidad. */
+  function bienvenida(sub, n) {
+    const u = S.user;
+    const foto = { 1: 'camino', 2: 'clase', 3: 'biblioteca' }[n] || 'camino';
+    return `<section class="relative mb-8 overflow-hidden rounded-2xl text-white shadow-[0_10px_30px_rgba(13,58,29,.18)] md:grid md:grid-cols-[1.3fr_1fr]" style="background:linear-gradient(135deg,#0D3A1D 0%,#14532A 60%,#1B6B37 100%)">
+      <div class="relative z-10 p-7 sm:p-10">
+        <p class="text-xs uppercase tracking-[.22em] text-[#E9D48A]">${INSTITUCION} · ${ROLE_LABEL[u.role]}</p>
+        <h1 class="mt-3 text-3xl sm:text-4xl">¡Hola de nuevo, ${esc(u.nombre.split(' ')[0])}!</h1>
+        <div class="regla-dorada mt-4"></div>
+        <p class="mt-4 max-w-md text-white/85">${sub}. Periodo lectivo 2026-2027.</p>
+      </div>
+      <div class="relative hidden md:block"><img src="img/${foto}.jpg" alt="Vida en el campus" class="absolute inset-0 h-full w-full object-cover object-top" />
+        <div class="absolute inset-0" style="background:linear-gradient(90deg,#14532A 0%,rgba(20,83,42,.35) 35%,rgba(20,83,42,0) 70%)"></div></div>
+    </section>` + serviciosWidget();
+  }
+  /** Galeria "Vida en el campus" con las fotos del registro institucional. */
+  function comunidad() {
+    const fotos = [['biblioteca', 'En la biblioteca'], ['laboratorio', 'Laboratorio de computación'], ['clase', 'Trabajo en clase'], ['cancha', 'Deporte y recreación']];
+    const retratos = ['polo', 'blazer', 'chaleco', 'lentes', 'deportivo', 'buzo'];
+    return `<section class="mt-10">
+      <div class="mb-4 flex items-end justify-between gap-3"><div><h2 class="text-2xl text-[#14532A]">Vida en el campus</h2><p class="text-sm text-slate-500">Registro fotográfico institucional</p></div></div>
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">${fotos.map(([f, t]) => `<figure class="card overflow-hidden !rounded-xl"><img src="img/${f}.jpg" alt="${esc(t)}" class="aspect-[4/3] w-full object-cover" loading="lazy" /><figcaption class="px-4 py-3 text-sm font-medium text-slate-700">${esc(t)}</figcaption></figure>`).join('')}</div>
+      <div class="card mt-5 flex flex-wrap items-center gap-4 p-4"><p class="serif text-[#14532A]">Nuestra comunidad</p><div class="flex -space-x-3">${retratos.map(f => `<img src="img/${f}.jpg" alt="" class="h-11 w-11 rounded-full object-cover ring-2 ring-white" loading="lazy" />`).join('')}</div><p class="text-sm text-slate-500">Estudiantes, docentes y personal de ${INSTITUCION}.</p></div>
+    </section>`;
+  }
+  /** Tarjeta de un servicio: abre en otra pestaña. El servidor ya filtró lo que este usuario puede ver. */
+  function servicioCard(sv, grande) {
+    const cuerpo = `<span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${sv.pendiente ? 'bg-slate-100 text-slate-400' : 'bg-[#E7F1EA] text-[#14532A] group-hover:bg-[#14532A] group-hover:text-white'} transition">${icon(sv.icono, 'w-6 h-6')}</span>
+      <span class="min-w-0 flex-1"><span class="block font-bold text-slate-900">${esc(sv.nombre)}</span>
+      ${grande || sv.pendiente ? `<span class="mt-0.5 block text-sm ${sv.pendiente ? 'text-amber-700' : 'text-slate-500'}">${sv.pendiente ? 'Pendiente: falta configurar su dirección.' : esc(sv.descripcion)}</span>` : ''}</span>
+      ${sv.pendiente ? '' : `<span class="text-slate-300 group-hover:text-[#C9A227] transition">${icon('enlace', 'w-5 h-5')}</span>`}`;
+    const cls = `group card flex items-center gap-4 ${grande ? 'p-5' : 'p-4'} transition`;
+    if (/^app:/.test(sv.url)) return `<button data-go="${esc(sv.url.slice(4))}" class="${cls} w-full text-left hover:-translate-y-0.5 hover:shadow-lg hover:border-[#CFE3D5]">${cuerpo}</button>`;
+    return sv.pendiente ? `<div class="${cls} opacity-80">${cuerpo}</div>`
+      : `<a href="${esc(sv.url)}" target="_blank" rel="noopener noreferrer" data-svc="${esc(sv.id)}" class="${cls} hover:-translate-y-0.5 hover:shadow-lg hover:border-[#CFE3D5]">${cuerpo}</a>`;
+  }
+  /** Accesos rápidos en el Resumen. */
+  function serviciosWidget() {
+    const l = S.data.servicios || [];
+    if (!l.length) return '';
+    return `<section class="mb-8"><div class="mb-3 flex items-end justify-between gap-3"><div><h2 class="text-2xl text-[#14532A]">Servicios institucionales</h2><p class="text-sm text-slate-500">Accesos disponibles para tu cuenta</p></div><button data-go="servicios" class="text-sm font-semibold text-[#14532A] hover:underline">Ver todos</button></div>
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">${l.map(sv => servicioCard(sv, false)).join('')}</div></section>`;
+  }
+  function serviciosView() {
+    const l = S.data.servicios || [];
+    return `<div class="mb-6"><h1 class="text-3xl text-[#14532A]">Servicios institucionales</h1><div class="regla-dorada mt-3"></div>
+      <p class="mt-3 max-w-2xl text-sm text-slate-600">Ves solo los servicios que corresponden a tu cuenta (${esc(ROLE_LABEL[S.user.role])}). Se abren en otra pestaña y usan la <b>misma cuenta institucional</b>; cada servicio vuelve a verificar tus permisos.</p></div>
+      ${l.length ? `<div class="grid gap-4 md:grid-cols-2">${l.map(sv => servicioCard(sv, true)).join('')}</div>` : empty('No tienes servicios adicionales asignados.')}
+      ${S.user.role === 'admin' ? `<div class="mt-6 rounded-2xl border border-[#E9D48A] bg-[#FBF7E8] p-5 text-sm text-[#5b4a12]"><b>Administración:</b> la lista y los permisos se editan en <code>/etc/edunova/servicios.json</code> en SRV-BD (por rol: administración, docente, estudiante, o por grupo LDAP). Los cambios se aplican sin reiniciar.</div>` : ''}`;
+  }
+  /** Aviso del estado de la impresora para todos (libre / en uso / pausada / problema). */
+  function estadoImpresoraHtml(e) {
+    if (!e) return '';
+    const st = {
+      libre: ['border-emerald-200 bg-emerald-50', 'bg-emerald-500', 'text-emerald-800'],
+      ocupada: ['border-amber-200 bg-amber-50', 'bg-amber-500 animate-pulse', 'text-amber-900'],
+      pausada: ['border-slate-300 bg-slate-50', 'bg-slate-400', 'text-slate-800'],
+      problema: ['border-red-200 bg-red-50', 'bg-red-500', 'text-red-800'],
+      desconocido: ['border-slate-200 bg-slate-50', 'bg-slate-300', 'text-slate-700'],
+      diferida: ['border-sky-200 bg-sky-50', 'bg-sky-500', 'text-sky-900'],
+    }[e.clase] || ['border-slate-200 bg-slate-50', 'bg-slate-300', 'text-slate-700'];
+    const tintas = (e.tintas || []).length ? `<div class="mt-3 flex flex-wrap gap-x-5 gap-y-2">${e.tintas.map(t => `<div class="w-28"><div class="flex justify-between text-[11px] text-slate-600"><span class="truncate">${esc(t.nombre)}</span><span>${t.nivel}%</span></div><div class="mt-1 h-1.5 overflow-hidden rounded-full bg-white"><div class="h-full rounded-full" style="width:${t.nivel}%;background:${esc(t.color)}"></div></div></div>`).join('')}</div>` : '';
+    const avisos = (e.avisos || []).map(a => `<span class="chip bg-amber-100 text-amber-900">${esc(a.titulo)}</span>`).join(' ');
+    return `<div id="estado-imp" class="mb-6 rounded-2xl border ${st[0]} p-4 sm:p-5" role="status" aria-live="polite">
+      <div class="flex flex-wrap items-center gap-3"><span class="relative flex h-3.5 w-3.5"><span class="h-3.5 w-3.5 rounded-full ${st[1]}"></span></span>
+        <p class="font-bold ${st[2]}">Impresora: ${esc(e.titulo)}</p>${avisos}<span class="ml-auto text-xs text-slate-500">Se actualiza solo cada 15 s</span></div>
+      <p class="mt-1 text-sm ${st[2]}">${esc(e.detalle)}</p>${(e.impresoras || []).length > 1 ? `<div class="mt-3 grid gap-2 sm:grid-cols-2">${e.impresoras.map(i => {
+        const c = { libre: 'bg-emerald-500', ocupada: 'bg-amber-500', pausada: 'bg-slate-400', problema: 'bg-red-500' }[i.clase] || 'bg-slate-300';
+        return `<div class="flex items-start gap-2 rounded-xl bg-white/70 px-3 py-2"><span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${c}"></span><span class="min-w-0 text-sm"><b class="text-slate-800">${esc(i.descripcion)}</b>${i.color ? ' <span class="chip bg-fuchsia-50 text-fuchsia-700">Color</span>' : ''}<br><span class="text-slate-600">${esc(i.titulo)}${i.enCola ? ` · ${i.enCola} en cola` : ''}${i.ubicacion ? ` · ${esc(i.ubicacion)}` : ''}</span></span></div>`; }).join('')}</div>` : tintas}</div>`;
+  }
+  // Mientras estás en "Imprimir", el aviso se refresca solo.
+  setInterval(async () => {
+    if (!S.user || S.route !== 'imprimir' || !S.data.pr || document.hidden) return;
+    try {
+      const e = await api('GET', '/imprimir/estado');
+      S.data.pr.estado = e;
+      const el = document.getElementById('estado-imp');
+      if (el) el.outerHTML = estadoImpresoraHtml(e);
+    } catch { /* se reintenta en el siguiente ciclo */ }
+  }, 15000);
+  /** Agregar impresora: busca en la red y por USB, y la crea en CUPS sin usar la terminal. */
+  async function nuevaImpForm() {
+    modal('Agregar impresora', `<div id="impBusqueda" class="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Buscando impresoras en la red y por USB… (unos 10 segundos)</div>`);
+    let lista = [];
+    try { lista = await api('GET', '/impresion/descubrir'); } catch (e) { lista = []; modalError(e.message); }
+    if (!$('#impBusqueda')) return; // cerraron el modal
+    const sug = t => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 30);
+    const opciones = lista.map((x, i) => `<label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 hover:border-[#14532A]"><input type="radio" name="sel" value="${i}" ${i === 0 ? 'checked' : ''} class="mt-1 accent-[#14532A]" />
+      <span class="min-w-0 text-sm"><b>${esc(x.nombre || x.modelo || 'Impresora')}</b>${x.ubicacion ? ` · ${esc(x.ubicacion)}` : ''}<br><span class="text-xs text-slate-500">${esc(x.tipo === 'direct' ? 'USB' : 'Red')} · ${esc(x.uri.length > 60 ? x.uri.slice(0, 60) + '…' : x.uri)}</span></span></label>`).join('');
+    S.impLista = lista;
+    $('#impBusqueda').outerHTML = `<form data-form="nuevaImpresora" class="space-y-4">
+      <div><p class="lbl">1. Elige la impresora</p><div class="space-y-2">${opciones || '<p class="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">No se encontró ninguna automáticamente. Escribe su dirección IP abajo (la ves en la pantalla de la impresora o en la página de impresión de configuración).</p>'}
+        <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-3"><input type="radio" name="sel" value="ip" ${lista.length ? '' : 'checked'} class="mt-1 accent-[#14532A]" /><span class="flex-1 text-sm"><b>Escribir su dirección IP</b><input name="ip" maxlength="60" class="inp mt-2" placeholder="Ejemplo: 192.168.100.60" /></span></label></div></div>
+      <div><p class="lbl">2. Datos para reconocerla</p><div class="grid gap-3 sm:grid-cols-2">
+        <div><label class="lbl" for="in">Nombre corto (sin espacios)</label><input id="in" name="nombre" required maxlength="40" pattern="[A-Za-z0-9_-]{2,40}" class="inp" value="${esc(sug(lista[0]?.ubicacion || lista[0]?.modelo || ''))}" placeholder="Biblioteca" /></div>
+        <div><label class="lbl" for="iu">Ubicación</label><input id="iu" name="ubicacion" maxlength="120" class="inp" placeholder="Biblioteca, planta baja" /></div>
+        <div class="sm:col-span-2"><label class="lbl" for="idd">Descripción que verán los usuarios</label><input id="idd" name="descripcion" maxlength="120" class="inp" placeholder="Impresora de la biblioteca" /></div></div></div>
+      <div class="grid gap-2 sm:grid-cols-2"><label class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm"><input type="checkbox" name="color" value="1" class="h-4 w-4 accent-[#14532A]" /> Imprime a color</label>
+        <label class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm"><input type="checkbox" name="activa" value="1" checked class="h-4 w-4 accent-[#14532A]" /> Disponible para imprimir</label></div>
+      <button class="btn btn-p w-full">Agregar impresora</button><p class="text-xs text-slate-500">Puede tardar hasta un minuto: CUPS le pregunta a la impresora qué sabe hacer.</p></form>`;
+  }
+  /** Imprimir: subir PDF/JPG/PNG con la cuenta institucional; cupo diario por rol. */
+  function imprimirView() {
+    const d = S.data.pr;
+    if (!d) return empty('Cargando…');
+    const c = d.cupo, lim = c.limite, libre = lim ? Math.max(lim - c.usado, 0) : null;
+    const pct = lim ? Math.min(100, Math.round(c.usado * 100 / lim)) : 0;
+    const est = e => ({ Completado: 'bg-emerald-50 text-emerald-700', Cancelado: 'bg-slate-100 text-slate-600', Abortado: 'bg-red-50 text-red-700', Detenido: 'bg-red-50 text-red-700', Procesando: 'bg-amber-50 text-amber-800', Pendiente: 'bg-amber-50 text-amber-800', Retenido: 'bg-amber-50 text-amber-800', 'En espera': 'bg-sky-50 text-sky-800' }[e] || 'bg-slate-100 text-slate-600');
+    const cancelable = t => !t.cancelado && ['Pendiente', 'Retenido', 'Procesando', 'En espera'].includes(t.estado);
+    return `<div class="mb-6"><h1 class="text-3xl text-[#14532A]">Imprimir</h1><div class="regla-dorada mt-3"></div>
+      <p class="mt-3 max-w-2xl text-sm text-slate-600">Sube tu documento: EduNova lo envía a la impresora libre con menos cola y te dice dónde retirarlo. El trabajo queda registrado con tu cuenta.</p>
+      ${d.retencionDias ? `<p class="mt-2 max-w-2xl rounded-xl border border-[#E9D48A] bg-[#FBF7E8] px-3 py-2 text-xs text-[#5b4a12]"><b>Aviso:</b> por control institucional se guarda una copia de lo que imprimes durante <b>${d.retencionDias} días</b>. Solo Administración puede verla y cada consulta queda registrada. Después se borra automáticamente.</p>` : ''}</div>
+      ${estadoImpresoraHtml(d.estado)}
+      <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <form data-form="imprimir" class="card space-y-4 p-6">
+          <div><label class="lbl" for="pf">Archivo (PDF, JPG o PNG · máx. 10 MB)</label>
+            <input id="pf" name="archivo" type="file" required accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" class="inp file:mr-3 file:rounded-lg file:border-0 file:bg-[#E7F1EA] file:px-3 file:py-1.5 file:font-semibold file:text-[#14532A]" /></div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div><label class="lbl" for="pc">Copias</label><input id="pc" name="copias" type="number" min="1" max="20" value="1" required class="inp" /></div>
+            <div><label class="lbl" for="pp">Páginas</label><input id="pp" name="paginas" maxlength="60" class="inp" placeholder="Todas (o p. ej. 1-3,5)" /></div>
+          </div>
+          <label class="flex items-center gap-3 rounded-xl border border-slate-200 p-3 ${c.color ? '' : 'opacity-60'}"><input type="checkbox" name="color" value="1" ${c.color ? '' : 'disabled'} class="h-4 w-4 accent-[#14532A]" />
+            <span class="text-sm"><b>Imprimir a color</b><br><span class="text-slate-500">${c.color ? 'Si no lo marcas, sale en blanco y negro.' : 'Tu tipo de cuenta imprime solo en blanco y negro.'}</span></span></label>
+          <button class="btn btn-p w-full" ${lim && !libre ? 'disabled' : ''}>Enviar a imprimir</button>
+          <p class="text-xs text-slate-500">Se cobran páginas × copias. Si cancelas un trabajo antes de que salga, se devuelve a tu cupo.</p>
+        </form>
+        <div class="card p-6"><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Tu cupo de hoy</p>
+          ${lim ? `<p class="mt-2 text-4xl font-black text-slate-900">${libre}<span class="text-lg font-semibold text-slate-400"> / ${lim} páginas</span></p>
+          <div class="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full ${pct >= 90 ? 'bg-red-500' : pct >= 60 ? 'bg-amber-500' : 'bg-[#14532A]'}" style="width:${pct}%"></div></div>
+          <p class="mt-2 text-sm text-slate-500">Has usado ${c.usado} página(s) hoy. Se renueva cada día.</p>`
+          : `<p class="mt-2 text-3xl font-black text-slate-900">Sin límite</p><p class="mt-1 text-sm text-slate-500">${c.usado} página(s) impresas hoy.</p>`}
+          <div class="mt-5 rounded-xl bg-[#FBF7E8] p-4 text-sm text-[#5b4a12]">${c.color ? 'Color permitido.' : 'Solo blanco y negro.'} Las imágenes se ajustan a la hoja.</div></div>
+      </div>
+      <div class="card mt-6 p-5"><div class="mb-3 flex items-center justify-between"><h2 class="text-xl text-[#14532A]">Mis impresiones</h2><button data-act="recargarImp" class="text-sm font-semibold text-[#14532A] hover:underline">Actualizar</button></div>
+        ${d.trabajos.length ? `<div class="overflow-x-auto"><table class="tbl"><thead><tr><th>Fecha</th><th>Documento</th><th>Impresora</th><th>Páginas</th><th>Tipo</th><th>Estado</th><th></th></tr></thead><tbody>${d.trabajos.map(t => `<tr>
+          <td class="whitespace-nowrap text-slate-500">${fecha(t.creado_en)}</td><td class="max-w-[260px] truncate" title="${esc(t.documento)}">${esc(t.documento)}</td><td>${esc(t.impresora || '')}</td>
+          <td>${t.paginas}${t.copias > 1 ? ` <span class="text-xs text-slate-400">(${t.copias} copias)</span>` : ''}</td><td>${t.color ? 'Color' : 'B/N'}</td>
+          <td><span class="chip ${est(t.estado)}">${esc(t.estado)}</span></td>
+          <td class="text-right">${cancelable(t) ? `<button data-act="cancelarImp" data-id="${t.id}" class="text-xs font-bold text-red-600">Cancelar</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-slate-500">Aún no has enviado documentos.</p>'}</div>`;
+  }
+  /** Biblioteca institucional: cada uno publica hacia su nivel o hacia abajo y ve lo de su nivel y lo de abajo. */
+  function bibliotecaView() {
+    const d = S.data.bib;
+    if (!d) return empty('Cargando…');
+    const sec = S.bibSec || 'libros';
+    const kb = b => b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+    const ext = n => (String(n || '').split('.').pop() || '').toUpperCase().slice(0, 4);
+    const chipNivel = r => r.curso_id ? 'bg-sky-50 text-sky-800' : ({ 1: 'bg-emerald-50 text-emerald-700', 2: 'bg-amber-50 text-amber-800', 3: 'bg-orange-50 text-orange-800', 4: 'bg-red-50 text-red-700' }[r.nivel]);
+    const chipOff = 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50', chipOn = 'bg-[#14532A] text-white';
+    const libros = d.recursos.filter(r => r.seccion === 'libros'), recursos = d.recursos.filter(r => r.seccion !== 'libros');
+    const acciones = r => `<div class="mt-auto flex flex-wrap items-center gap-2 pt-4">${r.tipo === 'enlace'
+        ? `<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-p">${r.seccion === 'libros' ? 'Leer en línea' : 'Abrir enlace'}</a>`
+        : `<a href="${API}/biblioteca/${r.id}/archivo" target="_blank" rel="noopener" class="btn btn-p">${r.seccion === 'libros' ? 'Leer' : 'Abrir'}</a><a href="${API}/biblioteca/${r.id}/archivo?descargar=1" class="btn btn-s">Descargar</a>`}
+        ${r.puedeBorrar ? `<button data-act="bibBorrar" data-id="${r.id}" data-titulo="${esc(r.titulo)}" class="ml-auto text-sm font-semibold text-red-600 hover:underline">Eliminar</button>` : ''}</div>`;
+    const formato = r => r.tipo === 'archivo' ? `<span class="chip bg-slate-100 text-slate-600">${esc(ext(r.archivo_nombre))} · ${kb(r.archivo_bytes)}</span>` : '<span class="chip bg-slate-100 text-slate-600">En línea</span>';
+    const buscar = r => esc([r.titulo, r.descripcion, r.autor_nombre, r.archivo_nombre, r.libro_autor, r.libro_editorial, r.asignatura].filter(Boolean).join(' ').toLowerCase());
+    const pestanas = [['libros', 'Libros digitales', libros.length], ['recursos', 'Recursos de estudio', recursos.length]].map(([k, t, n]) =>
+      `<button data-act="bibSec" data-sec="${k}" class="-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold ${sec === k ? 'border-[#14532A] text-[#14532A]' : 'border-transparent text-slate-500 hover:text-slate-800'}">${t} <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">${n}</span></button>`).join('');
+    let cuerpo, intro;
+    if (sec === 'libros') {
+      const fa = S.bibAsig || '', fn = S.bibNivEdu || '';
+      const lista = libros.filter(r => (!fa || r.asignatura === fa) && (!fn || r.nivel_educativo === fn || r.nivel_educativo === 'Todos los niveles'));
+      intro = 'Catálogo de libros digitales del colegio, organizados por asignatura y nivel.';
+      const sel = (act, val, todos, ops) => `<select data-bibsel="${act}" class="inp">${[['', todos], ...ops.map(o => [o, o])].map(([v, t]) => `<option value="${esc(v)}" ${v === val ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+      cuerpo = `<div class="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">${sel('asig', fa, 'Todas las asignaturas', d.asignaturas)}${sel('nivedu', fn, 'Todos los niveles', d.nivelesEdu.filter(n => n !== 'Todos los niveles'))}
+          <input data-filtro class="inp lg:col-span-2" placeholder="Buscar por título, autor o editorial…" /></div>`
+        + (lista.length ? `<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">${lista.map(r => `<div class="card flex flex-col p-5" data-item="${buscar(r)}">
+          <div class="flex items-start gap-4"><span class="flex h-16 w-12 shrink-0 items-center justify-center rounded-md bg-[#14532A] text-[#F3E7BE] shadow">${icon('book', 'w-6 h-6')}</span>
+            <div class="min-w-0 flex-1"><h3 class="font-bold leading-snug text-slate-900">${esc(r.titulo)}</h3>
+              <p class="mt-1 text-sm text-slate-700">${esc(r.libro_autor || '')}</p>${r.libro_editorial ? `<p class="text-xs text-slate-500">${esc(r.libro_editorial)}</p>` : ''}</div></div>
+          ${r.descripcion ? `<p class="mt-3 text-sm leading-6 text-slate-600">${esc(r.descripcion)}</p>` : ''}
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip bg-[#E7F1EA] text-[#14532A]">${esc(r.asignatura || '')}</span><span class="chip bg-[#FBF7E8] text-[#5b4a12]">${esc(r.nivel_educativo || '')}</span>${formato(r)}${r.nivel > 1 ? `<span class="chip ${chipNivel(r)}">${esc(r.audiencia)}</span>` : ''}</div>
+          <p class="mt-3 text-xs text-slate-500">Agregado por ${esc(r.autor_nombre)} · ${fecha(r.creado_en)}${r.tipo === 'archivo' ? ` · ${r.descargas} lectura(s)` : ''}</p>
+          ${acciones(r)}</div>`).join('')}</div>`
+          : empty(libros.length ? 'No hay libros con esos filtros.' : 'Todavía no hay libros en el catálogo.'));
+    } else {
+      const cat = S.bibCat || '';
+      const lista = recursos.filter(r => !cat || r.categoria === cat);
+      intro = { admin: 'Material y documentos de toda la institución.', secretary: 'Material de toda la institución, del personal, de secretaría y de todos los cursos.', teacher: 'Material de la institución, del personal y el que compartes con tus cursos.', student: 'Material de la institución y el que tus profesores comparten con tus cursos.' }[S.user.role];
+      const filtros = ['', ...d.categorias].map(c => `<button data-act="bibCat" data-cat="${esc(c)}" class="chip ${cat === c ? chipOn : chipOff}">${c ? esc(c) : 'Todo'}</button>`).join('');
+      cuerpo = `<div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center"><div class="flex flex-wrap gap-2">${filtros}</div>
+          <input data-filtro class="inp lg:ml-auto lg:max-w-xs" placeholder="Buscar por título, autor o archivo…" /></div>`
+        + (lista.length ? `<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">${lista.map(r => `<div class="card flex flex-col p-5" data-item="${buscar(r)}">
+          <div class="flex items-start gap-3"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#E7F1EA] text-[#14532A]">${icon(r.tipo === 'enlace' ? 'enlace' : 'archivo', 'w-5 h-5')}</span>
+            <div class="min-w-0 flex-1"><h3 class="font-bold leading-snug text-slate-900">${esc(r.titulo)}</h3><p class="mt-0.5 text-xs text-slate-500">${esc(r.categoria)}</p></div></div>
+          ${r.descripcion ? `<p class="mt-3 text-sm leading-6 text-slate-600">${esc(r.descripcion)}</p>` : ''}
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip ${chipNivel(r)}">${esc(r.audiencia)}</span>${formato(r)}</div>
+          <p class="mt-3 text-xs text-slate-500">${esc(r.autor_nombre)} · ${fecha(r.creado_en)}${r.tipo === 'archivo' ? ` · ${r.descargas} descarga(s)` : ''}</p>
+          ${acciones(r)}</div>`).join('')}</div>`
+          : empty(recursos.length ? 'No hay nada en esta categoría.' : 'Todavía no hay recursos publicados para ti.'));
+    }
+    return `<div class="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h1 class="text-3xl text-[#14532A]">Biblioteca</h1><div class="regla-dorada mt-3"></div>
+      <p class="mt-3 max-w-2xl text-sm text-slate-600">${intro}</p></div>
+      ${d.puedePublicar ? `<button data-act="bibForm" class="btn btn-p">${sec === 'libros' ? '+ Agregar libro' : '+ Publicar recurso'}</button>` : ''}</div>
+      <div class="mb-5 flex gap-1 border-b border-slate-200">${pestanas}</div>
+      ${cuerpo}`;
+  }
+  function bibForm() {
+    const d = S.data.bib, libro = (S.bibSec || 'libros') === 'libros';
+    const opciones = d.niveles.map(n => `<option value="n:${n.nivel}">${esc(n.nombre)}</option>`).join('')
+      + (!libro && d.cursos.length ? `<optgroup label="Un curso">${d.cursos.map(c => `<option value="c:${c.id}">${esc(c.codigo)} · ${esc(c.nombre)}</option>`).join('')}</optgroup>` : '');
+    const ops = l => l.map(x => `<option>${esc(x)}</option>`).join('');
+    modal(libro ? 'Agregar libro digital' : 'Publicar recurso de estudio', `<form data-form="biblioteca" class="space-y-4">
+      <input type="hidden" name="seccion" value="${libro ? 'libros' : 'recursos'}" />
+      <div><label class="lbl">${libro ? '¿El libro es un archivo o está en línea?' : '¿Qué vas a publicar?'}</label><select name="tipo" data-bibtipo class="inp"><option value="archivo">${libro ? 'Archivo (PDF, EPUB en ZIP…)' : 'Un archivo (PDF, Word, Excel…)'}</option><option value="enlace">${libro ? 'Enlace a la versión en línea' : 'Un enlace a una página web'}</option></select></div>
+      <div><label class="lbl">Título${libro ? ' del libro' : ''}</label><input name="titulo" required maxlength="150" class="inp" placeholder="${libro ? 'Matemática 10mo EGB – Texto del estudiante' : 'Guía de ejercicios – Unidad 2'}" /></div>
+      ${libro ? `<div class="grid gap-4 sm:grid-cols-2">
+        <div><label class="lbl">Autor</label><input name="libro_autor" required maxlength="150" class="inp" placeholder="Ministerio de Educación del Ecuador" /></div>
+        <div><label class="lbl">Editorial y año (opcional)</label><input name="libro_editorial" maxlength="150" class="inp" placeholder="MinEduc, 2024" /></div>
+        <div><label class="lbl">Asignatura</label><select name="asignatura" required class="inp">${ops(d.asignaturas)}</select></div>
+        <div><label class="lbl">Nivel educativo</label><select name="nivel_educativo" required class="inp">${ops(d.nivelesEdu)}</select></div></div>` : ''}
+      <div><label class="lbl">${libro ? 'Reseña' : 'Descripción'} (opcional)</label><textarea name="descripcion" maxlength="1000" rows="2" class="inp"></textarea></div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        ${libro ? '' : `<div><label class="lbl">Categoría</label><select name="categoria" required class="inp">${ops(d.categorias)}</select></div>`}
+        <div><label class="lbl">¿Quién lo ve?</label><select name="destino" required class="inp">${opciones}</select></div></div>
+      <div id="bibArchivo"><label class="lbl">Archivo (máx. ${d.maxMB} MB)</label>
+        <input name="archivo" type="file" accept="${libro ? '.pdf,.zip' : '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.jpg,.jpeg,.png,.zip'}" class="inp" /></div>
+      <div id="bibEnlace" class="hidden"><label class="lbl">Enlace</label><input name="url" type="url" maxlength="500" class="inp" placeholder="https://…" /></div>
+      <p class="rounded-xl bg-[#FBF7E8] px-3 py-2 text-xs text-[#5b4a12]">${libro
+        ? '<b>Solo libros con permiso de distribución</b> (textos del Ministerio de Educación, libros de acceso abierto o con licencia del colegio). Queda registrado en la auditoría con tu nombre.'
+        : 'Solo puedes publicar para tu nivel o niveles inferiores. La publicación queda registrada en la auditoría con tu nombre.'}</p>
+      <div id="modalError" class="hidden rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"></div>
+      <div class="flex justify-end gap-2"><button type="button" data-act="cerrar" class="btn btn-s">Cancelar</button><button class="btn btn-p">${libro ? 'Agregar' : 'Publicar'}</button></div></form>`);
+  }
+  /** Impresión: estado de impresoras, control y historial (vía API de impresión, solo administración/TI). */
+  function impresionView() {
+    const d = S.data.imp;
+    const head = `<div class="mb-6 flex flex-wrap items-end justify-between gap-3"><div><h1 class="text-3xl text-[#14532A]">Impresión</h1><div class="regla-dorada mt-3"></div>
+      <p class="mt-3 max-w-2xl text-sm text-slate-600">Estado de las impresoras de la institución (CUPS en SRV-BD). Las acciones quedan registradas en la auditoría con tu nombre.</p></div>
+      <div class="flex gap-2"><button data-act="recargarImp" class="btn btn-s">Actualizar</button><button data-act="nuevaImp" class="btn btn-p">+ Agregar impresora</button></div></div>`;
+    if (!d) return head + empty('Cargando…');
+    const chip = p => p.detenida ? 'bg-red-50 text-red-700' : p.estado === 'Imprimiendo' ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700';
+    const cards = d.impresoras.length ? `<div class="grid gap-4 lg:grid-cols-2">${d.impresoras.map(p => `<div class="card p-5">
+        <div class="flex items-start gap-4"><span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#E7F1EA] text-[#14532A]">${icon('impresora', 'w-6 h-6')}</span>
+        <div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><h3 class="font-bold text-slate-900">${esc(p.nombre)}</h3><span class="chip ${chip(p)}">${esc(p.estado)}</span>${p.aceptaTrabajos ? '' : '<span class="chip bg-slate-100 text-slate-600">No acepta trabajos</span>'}</div>
+        <p class="mt-1 text-sm text-slate-500">${esc(p.modelo || p.descripcion || '')}${p.ubicacion ? ' · ' + esc(p.ubicacion) : ''}</p>${p.mensaje ? `<p class="mt-1 text-xs text-slate-500">${esc(p.mensaje)}</p>` : ''}
+        ${(p.avisos || []).length ? `<div class="mt-2 flex flex-wrap gap-1.5">${p.avisos.map(a => `<span class="chip ${a.nivel === 'error' ? 'bg-red-50 text-red-700' : 'bg-amber-100 text-amber-900'}" title="${esc(a.detalle)}">${esc(a.titulo)}</span>`).join('')}</div>` : ''}
+        ${p.enCola ? `<p class="mt-2 text-xs font-semibold text-amber-800">${p.enCola} trabajo(s) en cola</p>` : ''}
+        ${(p.tintas || []).length ? `<div class="mt-3 flex flex-wrap gap-x-4 gap-y-2">${p.tintas.map(t => `<div class="w-24"><div class="flex justify-between text-[11px] text-slate-500"><span class="truncate">${esc(t.nombre)}</span><span>${t.nivel}%</span></div><div class="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full" style="width:${t.nivel}%;background:${esc(t.color)}"></div></div></div>`).join('')}</div>` : ''}</div></div>
+        <div class="mt-4 grid gap-2 rounded-xl bg-slate-50 p-3 sm:grid-cols-2">
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-act="impGrupo" data-imp="${esc(p.nombre)}" ${p.activa ? 'checked' : ''} class="h-4 w-4 accent-[#14532A]" /> <span><b>Disponible para imprimir</b><br><span class="text-xs text-slate-500">Estudiantes y docentes pueden usarla</span></span></label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-act="impColor" data-imp="${esc(p.nombre)}" ${p.color ? 'checked' : ''} class="h-4 w-4 accent-[#14532A]" /> <span><b>Imprime a color</b><br><span class="text-xs text-slate-500">Recibe los trabajos a color</span></span></label></div>
+        <div class="mt-3 flex flex-wrap gap-2">${p.detenida
+          ? `<button data-act="impCtl" data-accion="reanudar" data-imp="${esc(p.nombre)}" class="btn btn-p">Reanudar</button>`
+          : `<button data-act="impCtl" data-accion="pausar" data-imp="${esc(p.nombre)}" class="btn btn-s">Pausar</button>`}
+          <button data-act="impCtl" data-accion="limpiar" data-imp="${esc(p.nombre)}" class="btn btn-d">Vaciar cola</button>
+          <button data-act="impEditar" data-imp="${esc(p.nombre)}" data-desc="${esc(p.descripcion)}" data-ubi="${esc(p.ubicacion)}" class="btn btn-s">Editar</button>
+          <button data-act="impQuitar" data-imp="${esc(p.nombre)}" class="ml-auto text-sm font-semibold text-red-600 hover:underline">Quitar</button></div></div>`).join('')}</div>` : empty('CUPS no tiene impresoras configuradas.');
+    const f = t => t ? new Date(t * 1000).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const est = e => ({ Completado: 'bg-emerald-50 text-emerald-700', Cancelado: 'bg-slate-100 text-slate-600', Abortado: 'bg-red-50 text-red-700', Detenido: 'bg-red-50 text-red-700', Procesando: 'bg-amber-50 text-amber-800', Pendiente: 'bg-amber-50 text-amber-800' }[e] || 'bg-slate-100 text-slate-600');
+    const tabla = `<div class="card mt-6 p-5"><h2 class="mb-3 text-xl text-[#14532A]">Historial de trabajos</h2>${d.trabajos.length ? `<div class="overflow-x-auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Impresora</th><th>Usuario / equipo</th><th>Documento</th><th>Páginas</th><th>Estado</th></tr></thead><tbody>${d.trabajos.map(t => `<tr><td class="text-slate-500">${t.id}</td><td class="whitespace-nowrap text-slate-500">${f(t.fecha)}</td><td>${esc(t.impresora)}</td><td>${esc(t.usuario || '—')}<br><span class="text-xs text-slate-400">${esc(t.origen)}</span></td><td class="max-w-[220px] truncate" title="${esc(t.documento)}">${esc(t.documento || '—')}</td><td>${t.paginas}</td><td><span class="chip ${est(t.estado)}">${esc(t.estado)}</span></td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-slate-500">No hay trabajos registrados.</p>'}</div>`;
+    const rol = { admin: 'Administración', secretary: 'Secretaría', teacher: 'Docente', student: 'Estudiante' };
+    const cons = `<div class="card mt-6 p-5"><h2 class="mb-1 text-xl text-[#14532A]">Consumo por usuario (este mes)</h2><p class="mb-3 text-sm text-slate-500">Cupo diario: estudiantes ${d.cupos.student.limite || 'sin límite'} · docentes ${d.cupos.teacher.limite || 'sin límite'} páginas. Se cambia en el archivo .env de EduNova.</p>${(d.consumo || []).length ? `<div class="overflow-x-auto"><table class="tbl"><thead><tr><th>Usuario</th><th>Rol</th><th>Hoy</th><th>Este mes</th><th>Envíos</th></tr></thead><tbody>${d.consumo.map(x => `<tr><td><b>${esc(x.nombre)}</b> <span class="font-mono text-xs text-slate-400">${esc(x.uid)}</span></td><td>${rol[x.rol] || '—'}</td><td>${x.hoy}</td><td><b>${x.mes}</b></td><td>${x.envios}</td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-slate-500">Nadie ha impreso desde la plataforma este mes.</p>'}</div>`;
+    const nota = `<div class="mt-4 rounded-2xl border border-[#E9D48A] bg-[#FBF7E8] p-4 text-sm text-[#5b4a12]"><b>Grupo de impresión:</b> los trabajos de estudiantes y docentes se reparten entre las impresoras marcadas como <i>Disponible para imprimir</i>: va a la que esté libre y con menos cola, y salta las que no tengan papel o estén apagadas. Los trabajos a color solo van a las marcadas como <i>Imprime a color</i>.</div>`;
+    const docs = `<div class="card mt-6 p-5"><h2 class="mb-1 text-xl text-[#14532A]">Documentos enviados desde la plataforma</h2>
+      <p class="mb-3 text-sm text-slate-500">${d.verContenido ? `Puedes abrir la copia de cada documento durante ${d.retencionDias || 0} días; luego se borra sola. <b>Cada vez que abres uno queda registrado en la Auditoría.</b> Los usuarios ven un aviso de que se guarda una copia.` : 'Solo Administración puede abrir el contenido.'}</p>
+      ${(d.recientes || []).length ? `<div class="overflow-x-auto"><table class="tbl"><thead><tr><th>Fecha</th><th>Usuario</th><th>Documento</th><th>Impresora</th><th>Páginas</th><th></th></tr></thead><tbody>${d.recientes.map(x => `<tr><td class="whitespace-nowrap text-slate-500">${fecha(x.creado_en)}</td><td><b>${esc(x.nombre)}</b> <span class="font-mono text-xs text-slate-400">${esc(x.uid)}</span></td>
+        <td class="max-w-[240px] truncate" title="${esc(x.documento)}">${esc(x.documento)}${x.cancelado ? ' <span class="chip bg-slate-100 text-slate-600">Cancelado</span>' : x.diferido ? ' <span class="chip bg-sky-50 text-sky-800">En espera</span>' : ''}</td><td>${esc(x.impresora)}</td><td>${x.paginas}${x.color ? ' <span class="chip bg-amber-50 text-amber-800">Color</span>' : ''}</td>
+        <td class="text-right">${d.verContenido ? (x.copia ? `<a href="${API}/impresion/documento/${x.id}" target="_blank" rel="noopener" class="btn btn-s !py-1.5">Ver documento</a>` : '<span class="text-xs text-slate-400">Copia borrada</span>') : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-slate-500">Aún no se ha impreso nada desde la plataforma.</p>'}</div>`;
+    const aviso = d.aviso ? `<div class="mb-6 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900"><b>Impresión diferida.</b> ${esc(d.aviso)}</div>` : '';
+    return head + aviso + (d.aviso ? '' : cards) + nota + docs + cons + (d.aviso ? '' : tabla);
+  }
+  function inicioView() { const base = inicioBase(); return base ? base + comunidad() : ''; }
+  function inicioBase() {
+    const r = S.data.resumen, u = S.user;
+    if (!r) return '';
+    if (u.role === 'admin') {
+      return bienvenida('Panel de administración académica', 3) +
+        `<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">${stat('Cursos activos', r.cursos, r.sinDocente ? `<span class="text-amber-700 font-bold">${r.sinDocente} sin docente asignado</span>` : 'Todos con docente')}${stat('Docentes', r.docentes, 'Grupo docentes (LDAP)')}${stat('Estudiantes', r.estudiantes, 'Grupo estudiantes (LDAP)')}${stat('Matrículas', r.matriculas, 'En cursos activos')}</div>
+        <div class="card p-5"><h2 class="font-black mb-3">Últimos movimientos</h2>${r.movimientos.length ? `<table class="tbl"><thead><tr><th>Fecha</th><th>Hecho por</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>${r.movimientos.map(m => `<tr><td class="whitespace-nowrap text-slate-500">${fecha(m.cuando)}</td><td><b>${esc(m.uid)}</b></td><td><span class="chip bg-indigo-50 text-indigo-700">${accion(m.accion)}</span></td><td>${esc(m.detalle)}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm text-slate-500">Aún no hay movimientos.</p>'}</div>
+        <div class="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5 text-sm text-indigo-900"><b>Cómo se organiza:</b> las cuentas se crean en el <b>panel de secretaría</b> (LDAP). Aquí creas los cursos, asignas un docente y matriculas a los estudiantes. Cada docente solo ve y califica sus cursos; cada estudiante solo ve los cursos donde está matriculado y sus propias notas.</div>`;
+    }
+    if (u.role === 'secretary') {
+      return bienvenida('Secretaría académica: matrículas y atención a la comunidad', 3) +
+        `<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">${stat('Cursos activos', r.cursos)}${stat('Docentes', r.docentes)}${stat('Estudiantes', r.estudiantes)}${stat('Matrículas', r.matriculas, 'En cursos activos')}</div>
+        <div class="card p-5"><h2 class="font-black mb-3">Últimas matrículas</h2>${r.movimientos.length ? `<table class="tbl"><thead><tr><th>Fecha</th><th>Hecho por</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>${r.movimientos.map(m => `<tr><td class="whitespace-nowrap text-slate-500">${fecha(m.cuando)}</td><td><b>${esc(m.uid)}</b></td><td><span class="chip bg-indigo-50 text-indigo-700">${accion(m.accion)}</span></td><td>${esc(m.detalle)}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm text-slate-500">Aún no hay matrículas registradas.</p>'}</div>
+        <div class="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5 text-sm text-indigo-900"><b>Tu trabajo en la plataforma:</b> en <b>Cursos</b> matriculas o retiras estudiantes; en <b>Docentes y estudiantes</b> consultas el directorio. Para <b>crear cuentas o restablecer contraseñas</b> usa el <b>Panel de Secretaría</b> (en Servicios, con esta misma cuenta).</div>`;
+    }
+    if (u.role === 'teacher') {
+      return bienvenida('Resumen de tus cursos', 2) +
+        `<div class="grid gap-4 sm:grid-cols-3 mb-6">${stat('Mis cursos', r.cursos)}${stat('Estudiantes', r.estudiantes, 'Total en tus cursos')}${stat('Por calificar', r.porCalificar, 'Entregas sin nota')}</div>
+        <div class="card p-5"><h2 class="font-black mb-3">Entregas pendientes de calificar</h2>${r.pendientes.length ? r.pendientes.map(p => `<button data-act="openAct" data-curso="${p.curso_id}" data-id="${p.id}" class="flex w-full items-center justify-between rounded-xl border p-3 mb-2 text-left hover:bg-slate-50"><span><b>${esc(p.titulo)}</b><br><span class="text-xs text-slate-500">${esc(p.curso)}</span></span><span class="chip bg-amber-50 text-amber-800">${p.pendientes} por calificar</span></button>`).join('') : '<p class="text-sm text-slate-500">No tienes entregas pendientes. 🎉</p>'}</div>`;
+    }
+    return bienvenida('Tu resumen académico', 1) +
+      `<div class="grid gap-4 sm:grid-cols-3 mb-6">${stat('Mis cursos', r.cursos)}${stat('Actividades por entregar', r.pendientes.length)}${stat('Promedio general', r.promedio === null ? '—' : r.promedio.toFixed(2), 'Sobre 10, con lo ya calificado')}</div>
+      <div class="card p-5"><h2 class="font-black mb-3">Próximas entregas</h2>${r.pendientes.length ? r.pendientes.map(p => `<button data-act="openCurso" data-id="${p.curso_id}" data-tab="actividades" class="flex w-full items-center justify-between rounded-xl border p-3 mb-2 text-left hover:bg-slate-50"><span><b>${esc(p.titulo)}</b> <span class="chip bg-slate-100 text-slate-600">${TIPO_LABEL[p.tipo] || esc(p.tipo)}</span><br><span class="text-xs text-slate-500">${esc(p.curso)}</span></span><span class="text-xs font-bold text-amber-700">Vence ${fecha(p.fecha_limite)}</span></button>`).join('') : '<p class="text-sm text-slate-500">No tienes entregas pendientes.</p>'}</div>`;
+  }
+
+  function cursosView() {
+    const list = S.data.cursos || [], admin = S.user.role === 'admin', secre = S.user.role === 'secretary';
+    const act = admin ? `<button data-act="cursoForm" class="btn btn-p">+ Nuevo curso</button>` : '';
+    const sub = admin ? 'Todos los cursos de la institución' : secre ? 'Todos los cursos · abre uno para matricular o retirar estudiantes' : S.user.role === 'teacher' ? 'Cursos en los que eres docente' : 'Cursos en los que estás matriculado';
+    if (!list.length) return header(admin || secre ? 'Cursos' : 'Mis cursos', sub, act) + empty(admin ? 'Aún no hay cursos. Crea el primero.' : secre ? 'Aún no hay cursos. Administración los crea.' : 'Todavía no tienes cursos asignados. Consulta con administración.');
+    return header(admin || secre ? 'Cursos' : 'Mis cursos', sub, act) + `<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">${list.map(c => `
+      <div class="card p-5 flex flex-col ${c.activo ? '' : 'opacity-60'}">
+        <div class="flex items-start justify-between gap-2"><span class="chip bg-indigo-50 text-indigo-700">${esc(c.nivel)}${c.paralelo ? ' · ' + esc(c.paralelo) : ''}</span><span class="text-xs font-mono text-slate-400">${esc(c.codigo)}</span></div>
+        <h3 class="mt-3 text-lg font-black leading-snug">${esc(c.nombre)}</h3>
+        <p class="text-sm text-slate-500">${esc(c.asignatura)}</p>
+        <p class="mt-3 text-sm">${c.docente_uid ? `Docente: <b>${esc(c.docente_nombre)}</b>` : '<span class="font-bold text-amber-700">Sin docente asignado</span>'}</p>
+        <div class="mt-4 flex items-center justify-between border-t pt-3 text-xs text-slate-500"><span>${c.inscritos}/${c.capacidad} estudiantes · ${c.actividades} actividades</span>${c.activo ? '' : '<span class="chip bg-slate-200 text-slate-600">Archivado</span>'}</div>
+        <div class="mt-4 flex gap-2"><button data-act="openCurso" data-id="${c.id}" class="btn btn-p flex-1">Abrir</button>${admin ? `<button data-act="cursoForm" data-id="${c.id}" class="btn btn-s">Editar</button>` : ''}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  function cursoView() {
+    const d = S.data.det;
+    if (!d) return '';
+    // staff = puede VER contenido docente; teacher = puede CREAR/CALIFICAR (solo el docente del curso).
+    const c = d.curso, secre = d.acceso === 'secretary', staff = d.acceso !== 'student' && !secre, admin = d.acceso === 'admin', teacher = d.acceso === 'teacher';
+    if (secre) S.tab = 'estudiantes'; // Secretaria solo gestiona la matricula
+    const tabs = secre ? [['estudiantes', `Estudiantes (${d.estudiantes.length})`]]
+      : [['anuncios', 'Anuncios'], ['actividades', 'Actividades']].concat(staff ? [['estudiantes', `Estudiantes (${d.estudiantes.length})`], ['calificaciones', 'Calificaciones']] : []);
+    const actions = (admin ? `<button data-act="cursoForm" data-id="${c.id}" class="btn btn-s">Editar curso</button><button data-act="archivar" data-id="${c.id}" data-activo="${c.activo ? 0 : 1}" class="btn ${c.activo ? 'btn-d' : 'btn-s'}">${c.activo ? 'Archivar' : 'Reactivar'}</button>` : '');
+    let body = '';
+    const supervisa = `<div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Vista de supervisión: el contenido académico lo publica y califica <b>${c.docente_uid ? esc(c.docente_nombre) : 'el docente asignado'}</b>. Administración solo lo consulta.</div>`;
+    if (S.tab === 'anuncios') body = (admin ? supervisa : '') + anunciosTab(d, teacher);
+    if (S.tab === 'actividades') body = (admin ? supervisa : '') + actividadesTab(d, staff, teacher);
+    if (S.tab === 'estudiantes' && (staff || secre)) body = estudiantesTab(d, admin || (secre && d.puedeMatricular));
+    if (S.tab === 'calificaciones' && staff) body = libretaTab();
+    return `<button data-go="cursos" class="mb-4 flex items-center gap-1 text-sm font-bold text-indigo-600">${icon('back', 'w-4 h-4')} Volver a cursos</button>` +
+      header(esc(c.nombre), `${esc(c.codigo)} · ${esc(c.asignatura)} · ${esc(c.nivel)}${c.paralelo ? ' ' + esc(c.paralelo) : ''} · ${esc(c.periodo)} · Docente: <b>${c.docente_uid ? esc(c.docente_nombre) : 'sin asignar'}</b>${c.activo ? '' : ' · <b class="text-red-700">ARCHIVADO</b>'}`, actions) +
+      `<div class="mb-6 flex flex-wrap gap-1 border-b border-[#E6E0D2]">${tabs.map(([t, l]) => `<button data-tab="${t}" class="-mb-px border-b-2 px-4 py-2.5 text-sm font-medium ${S.tab === t ? 'border-[#C9A227] text-[#14532A]' : 'border-transparent text-slate-500 hover:text-slate-800'}">${l}</button>`).join('')}</div>${body}`;
+  }
+  function anunciosTab(d, staff) {
+    const form = staff ? `<form data-form="anuncio" class="card p-5 mb-5 space-y-3"><h3 class="font-black">Publicar anuncio</h3><input name="titulo" required maxlength="150" class="inp" placeholder="Título" /><textarea name="cuerpo" required maxlength="4000" rows="3" class="inp" placeholder="Mensaje para el curso"></textarea><button class="btn btn-p">Publicar</button></form>` : '';
+    return form + (d.anuncios.length ? d.anuncios.map(a => `<div class="card p-5 mb-3"><div class="flex items-start justify-between gap-3"><div><h3 class="font-black">${esc(a.titulo)}</h3><p class="text-xs text-slate-500">${esc(a.autor)} · ${fecha(a.creado_en)}</p></div>${staff ? `<button data-act="borrarAnuncio" data-id="${a.id}" class="text-xs font-bold text-red-600">Borrar</button>` : ''}</div><pre class="txt mt-3 text-sm text-slate-700">${esc(a.cuerpo)}</pre></div>`).join('') : empty('No hay anuncios todavía.'));
+  }
+  function actividadesTab(d, staff, teacher) {
+    const pesosInfo = `<div class="mb-4 flex flex-wrap items-center gap-2 text-sm"><span class="font-bold text-slate-600">Cómo se calcula la nota final:</span> ${chipsPesos(d.pesos)}</div>`;
+    const top = pesosInfo + (teacher ? `<div class="mb-4 flex justify-end"><button data-act="actForm" class="btn btn-p">+ Nueva actividad</button></div>` : '');
+    if (!d.actividades.length) return top + empty(teacher ? 'Crea la primera tarea, lección o examen del curso.' : 'El docente aún no publica actividades.');
+    return top + d.actividades.map(a => {
+      const venc = Number(a.vencida) === 1;
+      let side;
+      if (staff) side = `<div class="text-right text-xs text-slate-500"><p>${a.entregas} entregas · ${a.calificadas} calificadas</p><div class="mt-2 flex justify-end gap-2"><button data-act="openAct" data-curso="${S.cursoId}" data-id="${a.id}" class="btn btn-p !py-1.5">${teacher ? 'Revisar y calificar' : 'Ver entregas'}</button>${teacher ? `<button data-act="actForm" data-id="${a.id}" class="btn btn-s !py-1.5">Editar</button>${Number(a.entregas) || Number(a.calificadas) ? '' : `<button data-act="borrarAct" data-id="${a.id}" class="btn btn-d !py-1.5">Borrar</button>`}` : ''}</div></div>`;
+      else {
+        const estado = a.nota !== null ? `<span class="chip bg-emerald-50 text-emerald-700">Calificada</span>` : a.entregado_en ? `<span class="chip bg-sky-50 text-sky-700">Entregada</span>` : venc ? `<span class="chip bg-red-50 text-red-700">No entregada</span>` : `<span class="chip bg-amber-50 text-amber-800">Pendiente</span>`;
+        side = `<div class="text-right"><div>${estado}</div><p class="mt-2 text-sm">Nota: ${fmtNota(num(a.nota), a.puntaje_max)}</p>${!venc && a.nota === null ? `<button data-act="entregaForm" data-id="${a.id}" class="btn btn-p !py-1.5 mt-2">${a.entregado_en ? 'Corregir entrega' : 'Entregar'}</button>` : ''}</div>`;
+      }
+      return `<div class="card p-5 mb-3"><div class="flex flex-wrap items-start justify-between gap-4"><div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><h3 class="font-black">${esc(a.titulo)}</h3><span class="chip bg-slate-100 text-slate-600">${TIPO_LABEL[a.tipo] || esc(a.tipo)}</span><span class="chip ${venc ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-800'}">${venc ? 'Cerró' : 'Vence'} ${fecha(a.fecha_limite)}</span><span class="text-xs text-slate-500">Vale ${Number(a.puntaje_max)} pts</span></div><pre class="txt mt-2 text-sm text-slate-600">${esc(a.descripcion)}</pre>
+        ${!staff && a.entregado_en ? `<div class="mt-3 rounded-xl bg-slate-50 p-3 text-sm"><p class="text-xs font-bold text-slate-500">Tu entrega (${fecha(a.entregado_en)})</p><pre class="txt">${esc(a.contenido)}</pre></div>` : ''}
+        ${!staff && a.comentario ? `<div class="mt-2 rounded-xl bg-emerald-50 p-3 text-sm"><p class="text-xs font-bold text-emerald-700">Comentario del docente</p><pre class="txt">${esc(a.comentario)}</pre></div>` : ''}</div>${side}</div></div>`;
+    }).join('');
+  }
+  function estudiantesTab(d, admin) {
+    const add = admin ? `<div class="mb-4 flex justify-end"><button data-act="matForm" class="btn btn-p">+ Matricular estudiantes</button></div>` : '';
+    if (!d.estudiantes.length) return add + empty('No hay estudiantes matriculados.');
+    return add + `<div class="card overflow-x-auto"><table class="tbl"><thead><tr><th>Estudiante</th><th>Usuario</th><th>Correo</th>${admin ? '<th></th>' : ''}</tr></thead><tbody>${d.estudiantes.map(e => `<tr><td><b>${esc(e.nombre)}</b>${e.suspendida ? ' <span class="chip bg-red-50 text-red-700">Suspendida</span>' : ''}</td><td class="font-mono text-xs">${esc(e.uid)}</td><td>${esc(e.email)}</td>${admin ? `<td class="text-right"><button data-act="retirar" data-uid="${esc(e.uid)}" class="text-xs font-bold text-red-600">Retirar</button></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+  }
+  function libretaTab() {
+    const L = S.data.libreta;
+    if (!L) return '';
+    const teacher = S.data.det?.acceso === 'teacher';
+    const suma = TIPOS.reduce((a, t) => a + Number(L.pesos[t] || 0), 0);
+    const pond = `<form data-form="pesos" class="card p-5 mb-5"><div class="mb-3 flex flex-wrap items-baseline justify-between gap-2"><h3 class="font-black">Ponderación de la nota final</h3><span class="text-xs text-slate-500">${L.porDefecto ? 'Valores iniciales: ajústalos a tu planificación.' : 'Definida por el docente del curso.'}</span></div>
+      <div class="grid gap-3 sm:grid-cols-5">${TIPOS.map(t => `<div><label class="lbl">${TIPO_PLURAL[t]}</label><div class="flex items-center gap-1"><input name="${t}" type="number" min="0" max="100" step="0.5" value="${Number(L.pesos[t] || 0)}" class="inp" ${teacher ? 'data-peso' : 'disabled'} /><span class="text-sm font-bold text-slate-500">%</span></div></div>`).join('')}</div>
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-3"><p class="text-sm">Total: <b id="sumaPesos" class="${suma === 100 ? 'text-emerald-700' : 'text-red-700'}">${suma} %</b> <span class="text-xs text-slate-500">(debe sumar 100 %). Cada componente se promedia sobre 10 y se multiplica por su peso.</span></p>${teacher ? '<button class="btn btn-p">Guardar ponderación</button>' : '<span class="text-xs text-slate-500">Solo el docente del curso puede cambiarla.</span>'}</div></form>`;
+    if (!L.filas.length) return pond + empty('No hay estudiantes matriculados.');
+    const tipos = TIPOS.filter(t => Number(L.pesos[t]) > 0 || L.actividades.some(a => a.tipo === t));
+    return pond + `<div class="card overflow-x-auto"><table class="tbl"><thead><tr><th>Estudiante</th>${L.actividades.map(a => `<th title="${esc(a.titulo)}">${esc(a.titulo.length > 16 ? a.titulo.slice(0, 15) + '…' : a.titulo)}<br><span class="normal-case font-normal">${TIPO_LABEL[a.tipo] || ''} /${Number(a.puntaje_max)}</span></th>`).join('')}${tipos.map(t => `<th class="bg-indigo-50">${TIPO_PLURAL[t]}<br><span class="normal-case font-normal">${Number(L.pesos[t] || 0)} % · /10</span></th>`).join('')}<th class="bg-indigo-100">Final /10</th><th>Evaluado</th></tr></thead><tbody>${L.filas.map(f => `<tr><td class="whitespace-nowrap"><b>${esc(f.nombre)}</b></td>${f.notas.map(n => `<td>${fmtNota(n)}</td>`).join('')}${tipos.map(t => { const c = f.categorias.find(x => x.tipo === t); return `<td class="bg-indigo-50/40">${c.promedio === null ? '<span class="text-slate-400">—</span>' : n2(c.promedio)}</td>`; }).join('')}<td>${promChip(f.final)}</td><td class="text-xs text-slate-500">${f.evaluado} %</td></tr>`).join('')}</tbody></table></div><p class="mt-3 text-xs text-slate-500"><b>Final</b> = promedio ponderado de los componentes que ya tienen notas (si aún no hay examen final, se calcula con lo evaluado). <b>Evaluado</b> = porcentaje del periodo que ya tiene notas.</p>`;
+  }
+
+  function actividadView() {
+    const E = S.data.ent;
+    if (!E) return '';
+    const a = E.actividad, lectura = S.user.role !== 'teacher';
+    return `<button data-act="openCurso" data-id="${S.cursoId}" data-tab="actividades" class="mb-4 flex items-center gap-1 text-sm font-bold text-indigo-600">${icon('back', 'w-4 h-4')} Volver al curso</button>` +
+      header(esc(a.titulo), `${TIPO_LABEL[a.tipo] || esc(a.tipo)} · vence ${fecha(a.fecha_limite)} · vale ${Number(a.puntaje_max)} puntos`) +
+      `<div class="card p-4 mb-5"><pre class="txt text-sm text-slate-600">${esc(a.descripcion)}</pre></div>` +
+      (lectura ? '<div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Vista de supervisión (solo lectura): las notas las registra el docente del curso.</div>' : '') +
+      (E.entregas.length ? E.entregas.map(e => lectura ? `<div class="card p-5 mb-3"><div class="flex flex-wrap items-start justify-between gap-4"><div class="min-w-0 flex-1"><h3 class="font-black">${esc(e.nombre)} <span class="font-mono text-xs font-normal text-slate-400">${esc(e.uid)}</span></h3>
+        ${e.entregado_en ? `<p class="text-xs text-slate-500">Entregó el ${fecha(e.entregado_en)} ${Number(e.tardia) ? '<span class="chip bg-red-50 text-red-700">Tardía</span>' : ''}</p><pre class="txt mt-2 rounded-xl bg-slate-50 p-3 text-sm">${esc(e.contenido)}</pre>` : '<p class="text-sm text-slate-400">Sin entrega en la plataforma.</p>'}</div>
+        <div class="text-right"><p class="lbl">Nota</p><p class="text-lg">${fmtNota(num(e.nota), a.puntaje_max)}</p>${e.comentario ? `<p class="mt-1 text-xs text-slate-500">${esc(e.comentario)}</p>` : ''}</div></div></div>` : `<form data-form="nota" data-uid="${esc(e.uid)}" class="card p-5 mb-3"><div class="flex flex-wrap items-start justify-between gap-4"><div class="min-w-0 flex-1"><h3 class="font-black">${esc(e.nombre)} <span class="font-mono text-xs font-normal text-slate-400">${esc(e.uid)}</span></h3>
+        ${e.entregado_en ? `<p class="text-xs text-slate-500">Entregó el ${fecha(e.entregado_en)} ${Number(e.tardia) ? '<span class="chip bg-red-50 text-red-700">Tardía</span>' : ''}</p><pre class="txt mt-2 rounded-xl bg-slate-50 p-3 text-sm">${esc(e.contenido)}</pre>` : '<p class="text-sm text-slate-400">Sin entrega en la plataforma (puedes calificar igual, p. ej. un examen escrito).</p>'}</div>
+        <div class="w-full sm:w-72 space-y-2"><label class="lbl">Nota (0 a ${Number(a.puntaje_max)})</label><input name="nota" type="number" step="0.01" min="0" max="${Number(a.puntaje_max)}" value="${e.nota === null ? '' : esc(Number(e.nota))}" class="inp" placeholder="Sin nota" /><input name="comentario" maxlength="500" value="${esc(e.comentario || '')}" class="inp" placeholder="Comentario (opcional)" /><button class="btn btn-p w-full">Guardar nota</button></div></div></form>`).join('')
+        : empty('No hay estudiantes matriculados en este curso.'));
+  }
+
+  function usuariosView() {
+    const list = S.data.usuarios || [];
+    const grupo = (rol, titulo) => {
+      const xs = list.filter(p => p.role === rol);
+      return `<div class="card p-5 mb-5"><h2 class="font-black mb-3">${titulo} (${xs.length})</h2>${xs.length ? `<div class="overflow-x-auto"><table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Estado</th></tr></thead><tbody>${xs.map(p => `<tr><td><b>${esc(p.nombre)}</b></td><td class="font-mono text-xs">${esc(p.uid)}</td><td>${esc(p.email)}</td><td>${p.suspendida ? '<span class="chip bg-red-50 text-red-700">Suspendida</span>' : '<span class="chip bg-emerald-50 text-emerald-700">Activa</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-slate-500">Nadie en este grupo.</p>'}</div>`;
+    };
+    return header('Docentes y estudiantes', 'Leídos del directorio OpenLDAP. Las cuentas se crean y suspenden en el panel de secretaría.', `<button data-act="refrescarUsuarios" class="btn btn-s">Actualizar</button>`) +
+      grupo('teacher', 'Docentes') + grupo('student', 'Estudiantes') + grupo('secretary', 'Secretaría') + grupo('admin', 'Administración');
+  }
+  function auditoriaView() {
+    const xs = S.data.audit || [];
+    return header('Auditoría', 'Últimas 200 acciones registradas en la plataforma') + (xs.length ? `<div class="card overflow-x-auto"><table class="tbl"><thead><tr><th>Fecha</th><th>Hecho por</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>${xs.map(m => `<tr><td class="whitespace-nowrap text-slate-500">${fecha(m.cuando)}</td><td><b>${esc(m.uid)}</b></td><td><span class="chip bg-indigo-50 text-indigo-700">${accion(m.accion)}</span></td><td>${esc(m.detalle)}</td></tr>`).join('')}</tbody></table></div>` : empty('Sin registros.'));
+  }
+  function notasView() {
+    const xs = S.data.notas || [];
+    return header('Mis calificaciones', 'Solo tú puedes ver estas notas') + (xs.length ? xs.map(c => `<div class="card p-5 mb-4"><div class="mb-3 flex items-center justify-between gap-3"><button data-act="openCurso" data-id="${c.curso_id}" data-tab="actividades" class="text-left"><h2 class="font-black hover:text-indigo-700">${esc(c.curso)}</h2><p class="text-xs font-mono text-slate-400">${esc(c.codigo)}</p></button><div class="text-right"><p class="text-xs text-slate-500">Nota final ponderada</p>${promChip(c.final)}</div></div>
+      <div class="mb-4 rounded-xl bg-slate-50 p-3">${desglose(c)}</div>
+      <p class="mb-1 text-xs font-bold uppercase tracking-wider text-slate-500">Detalle por actividad</p><table class="tbl"><thead><tr><th>Actividad</th><th>Tipo</th><th>Nota</th><th>Comentario</th></tr></thead><tbody>${c.items.map(i => `<tr><td>${esc(i.titulo)}</td><td>${TIPO_LABEL[i.tipo] || esc(i.tipo)}</td><td>${fmtNota(num(i.nota), i.puntaje_max)}</td><td class="text-slate-600">${esc(i.comentario || '')}</td></tr>`).join('')}</tbody></table></div>`).join('') : empty('Aún no tienes actividades en tus cursos.'));
+  }
+  function perfilView() {
+    const u = S.user;
+    return header('Mi perfil', 'Datos de tu cuenta institucional (OpenLDAP)') + `<div class="card max-w-lg p-6 space-y-4">
+      <div><p class="lbl">Usuario</p><p class="font-bold text-lg">${esc(u.uid)}</p></div><div><p class="lbl">Nombre</p><p class="font-bold">${esc(u.nombre)}</p></div>
+      <div><p class="lbl">Correo</p><p class="font-bold">${esc(u.email || '—')}</p></div><div><p class="lbl">Rol en la plataforma</p><p class="font-bold text-indigo-700">${ROLE_LABEL[u.role]}</p></div>
+      <p class="text-xs text-slate-500">Para corregir tu nombre o tus datos, acude a secretaría.</p></div>
+      <form data-form="clave" class="card max-w-lg p-6 mt-5 space-y-3" autocomplete="off"><h2 class="text-lg font-black">Cambiar mi contraseña</h2>
+        <p class="text-sm text-slate-500">Es la misma contraseña de tu <b>correo institucional</b> y del <b>Wi-Fi</b>: el cambio se aplica a los tres servicios.</p>
+        <div><label class="lbl">Contraseña actual</label><input name="actual" type="password" required autocomplete="current-password" class="inp" /></div>
+        <div><label class="lbl">Nueva contraseña</label><input name="nueva" type="password" required minlength="10" maxlength="72" autocomplete="new-password" class="inp" data-nueva /></div>
+        <div><label class="lbl">Repite la nueva contraseña</label><input name="nueva2" type="password" required autocomplete="new-password" class="inp" /></div>
+        <ul id="reglas" class="text-xs space-y-0.5 text-slate-500"><li data-r="len">• Entre 10 y 72 caracteres</li><li data-r="mix">• Minúscula, mayúscula y número</li><li data-r="uid">• Que no contenga tu usuario</li></ul>
+        <button class="btn btn-p w-full">Cambiar contraseña</button>
+        <p class="text-xs text-slate-500">Si olvidaste la actual, secretaría puede restablecerla presentando tu cédula.</p></form>`;
+  }
+
+  /* ======================= Ventanas (modales) ======================= */
+  function modal(title, inner) {
+    $('#modal').innerHTML = `<div class="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4" data-act="cerrarFondo"><div class="card w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 fade-in"><div class="mb-4 flex items-center justify-between"><h2 class="text-xl font-black">${title}</h2><button data-act="cerrar" class="text-2xl leading-none text-slate-400 hover:text-slate-700">&times;</button></div>${inner}<div id="modalError" class="hidden mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"></div></div></div>`;
+    $('#modal input, #modal textarea, #modal select')?.focus();
+  }
+  const closeModal = () => { $('#modal').innerHTML = ''; };
+  function modalError(msg) { const el = $('#modalError'); if (el) { el.textContent = msg; el.classList.remove('hidden'); } else notify(msg, false); }
+
+  async function cursoForm(id) {
+    let c = { codigo: '', nombre: '', asignatura: '', nivel: '', paralelo: '', periodo: '2026-2027', capacidad: 35, docente_uid: '' };
+    try {
+      const docentes = await api('GET', '/usuarios?rol=teacher');
+      if (id) c = (await api('GET', `/cursos/${id}`)).curso;
+      const f = (n, l, attrs = '') => `<div><label class="lbl">${l}</label><input name="${n}" value="${esc(c[n] ?? '')}" class="inp" ${attrs} /></div>`;
+      modal(id ? 'Editar curso' : 'Nuevo curso', `<form data-form="curso" data-id="${id || ''}" class="grid gap-3 sm:grid-cols-2">
+        ${f('codigo', 'Código', 'required maxlength="30" placeholder="MAT-8A"')}${f('periodo', 'Periodo', 'required maxlength="20"')}
+        <div class="sm:col-span-2">${f('nombre', 'Nombre del curso', 'required maxlength="120" placeholder="Matemáticas 8vo A"')}</div>
+        ${f('asignatura', 'Asignatura', 'required maxlength="120"')}${f('nivel', 'Nivel', 'required maxlength="40" placeholder="8vo EGB"')}
+        ${f('paralelo', 'Paralelo', 'maxlength="10" placeholder="A"')}${f('capacidad', 'Cupo máximo', 'required type="number" min="1" max="200"')}
+        <div class="sm:col-span-2"><label class="lbl">Docente</label><select name="docente_uid" class="inp"><option value="">— Sin asignar —</option>${docentes.filter(d => !d.suspendida || d.uid === c.docente_uid).map(d => `<option value="${esc(d.uid)}" ${d.uid === c.docente_uid ? 'selected' : ''}>${esc(d.nombre)} (${esc(d.uid)})</option>`).join('')}</select><p class="mt-1 text-xs text-slate-500">Lista del grupo <b>docentes</b> de LDAP.</p></div>
+        <div class="sm:col-span-2 flex justify-end gap-2 pt-2"><button type="button" data-act="cerrar" class="btn btn-s">Cancelar</button><button class="btn btn-p">${id ? 'Guardar cambios' : 'Crear curso'}</button></div></form>`);
+    } catch (e) { notify(e.message, false); }
+  }
+  function actForm(id) {
+    const a = id ? S.data.det.actividades.find(x => x.id === Number(id)) : { titulo: '', descripcion: '', tipo: 'tarea', fecha_limite: '', puntaje_max: 10 };
+    const fl = a.fecha_limite ? a.fecha_limite.replace(' ', 'T').slice(0, 16) : '';
+    modal(id ? 'Editar actividad' : 'Nueva actividad', `<form data-form="actividad" data-id="${id || ''}" class="space-y-3">
+      <div><label class="lbl">Título</label><input name="titulo" required maxlength="150" value="${esc(a.titulo)}" class="inp" /></div>
+      <div><label class="lbl">Instrucciones</label><textarea name="descripcion" required maxlength="5000" rows="4" class="inp">${esc(a.descripcion)}</textarea></div>
+      <div class="grid gap-3 sm:grid-cols-3"><div><label class="lbl">Tipo</label><select name="tipo" class="inp">${Object.entries(TIPO_LABEL).map(([k, l]) => `<option value="${k}" ${a.tipo === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div><label class="lbl">Fecha límite</label><input name="fecha_limite" type="datetime-local" required value="${esc(fl)}" class="inp" /></div>
+        <div><label class="lbl">Puntaje</label><input name="puntaje_max" type="number" step="0.5" min="1" max="100" required value="${esc(Number(a.puntaje_max))}" class="inp" /></div></div>
+      <div class="flex justify-end gap-2 pt-2"><button type="button" data-act="cerrar" class="btn btn-s">Cancelar</button><button class="btn btn-p">${id ? 'Guardar' : 'Publicar actividad'}</button></div></form>`);
+  }
+  function entregaForm(id) {
+    const a = S.data.det.actividades.find(x => x.id === Number(id));
+    modal(`Entregar: ${esc(a.titulo)}`, `<form data-form="entrega" data-id="${a.id}" class="space-y-3"><p class="text-sm text-slate-500">Vence ${fecha(a.fecha_limite)}. Escribe tu respuesta o pega el enlace a tu documento (Nextcloud, Drive…). Puedes corregirla hasta la fecha límite mientras no tenga nota.</p>
+      <textarea name="contenido" required maxlength="8000" rows="8" class="inp">${esc(a.contenido || '')}</textarea>
+      <div class="flex justify-end gap-2"><button type="button" data-act="cerrar" class="btn btn-s">Cancelar</button><button class="btn btn-p">Enviar entrega</button></div></form>`);
+  }
+  async function matForm() {
+    try {
+      const est = await api('GET', '/usuarios?rol=student');
+      const ya = new Set(S.data.det.estudiantes.map(e => e.uid));
+      const libres = est.filter(e => !ya.has(e.uid) && !e.suspendida);
+      const c = S.data.det.curso;
+      modal('Matricular estudiantes', `<form data-form="matricula" class="space-y-3"><p class="text-sm text-slate-500">Cupo: ${ya.size}/${c.capacidad}. Solo aparecen estudiantes activos que aún no están en este curso.</p>
+        <input data-filtro class="inp" placeholder="Buscar por nombre o usuario…" />
+        <div class="max-h-72 overflow-y-auto rounded-xl border divide-y">${libres.length ? libres.map(e => `<label data-item="${esc((e.nombre + ' ' + e.uid).toLowerCase())}" class="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer"><input type="checkbox" name="uids" value="${esc(e.uid)}" class="h-4 w-4" /><span><b>${esc(e.nombre)}</b> <span class="font-mono text-xs text-slate-400">${esc(e.uid)}</span></span></label>`).join('') : '<p class="p-4 text-sm text-slate-500">No hay estudiantes disponibles. Créalos en el panel de secretaría.</p>'}</div>
+        <div class="flex justify-end gap-2"><button type="button" data-act="cerrar" class="btn btn-s">Cancelar</button><button class="btn btn-p">Matricular seleccionados</button></div></form>`);
+    } catch (e) { notify(e.message, false); }
+  }
+
+  /* ======================= Eventos ======================= */
+  // Registro en auditoría al abrir un servicio (no bloquea la apertura).
+  document.addEventListener('click', ev => {
+    const a = ev.target.closest('a[data-svc]');
+    if (a) api('POST', `/servicios/${encodeURIComponent(a.dataset.svc)}/abrir`, {}).catch(() => {});
+  });
+  document.addEventListener('click', async ev => {
+    const t = ev.target.closest('[data-go],[data-act],[data-tab]');
+    if (!t) return;
+    if (t.dataset.act === 'cerrarFondo' && ev.target !== t) return;
+    if (t.dataset.go) return go(t.dataset.go);
+    if (t.dataset.tab && !t.dataset.act) { S.tab = t.dataset.tab; return go('curso'); }
+    const id = t.dataset.id;
+    try {
+      switch (t.dataset.act) {
+        case 'menu': S.menu = !S.menu; render(); break;
+        case 'logout': await api('POST', '/logout', {}).catch(() => {}); S.user = null; S.route = 'inicio'; render(); break;
+        case 'cerrar': case 'cerrarFondo': closeModal(); break;
+        case 'openCurso': go('curso', { cursoId: Number(id), tab: t.dataset.tab || 'anuncios' }); break;
+        case 'openAct': go('actividad', { cursoId: Number(t.dataset.curso), actId: Number(id) }); break;
+        case 'cursoForm': cursoForm(id); break;
+        case 'actForm': actForm(id); break;
+        case 'entregaForm': entregaForm(id); break;
+        case 'matForm': matForm(); break;
+        case 'refrescarUsuarios': S.data.usuarios = await api('GET', '/usuarios?refrescar=1'); render(); notify('Directorio actualizado.'); break;
+        case 'recargarImp': reload(); break;
+        case 'bibCat': S.bibCat = t.dataset.cat; render(); break;
+        case 'bibSec': S.bibSec = t.dataset.sec; render(); break;
+        case 'bibForm': bibForm(); break;
+        case 'bibBorrar':
+          if (!confirmar(`¿Eliminar "${t.dataset.titulo}" de la biblioteca? Nadie podrá verlo después.`)) return;
+          await api('DELETE', `/biblioteca/${id}`); notify('Eliminado de la biblioteca.'); reload(); break;
+        case 'nuevaImp': nuevaImpForm(); break;
+        case 'impGrupo': case 'impColor': {
+          const campo = t.dataset.act === 'impGrupo' ? 'activa' : 'color';
+          await api('PATCH', `/impresion/impresoras/${encodeURIComponent(t.dataset.imp)}`, { [campo]: t.checked });
+          notify(campo === 'activa' ? (t.checked ? 'Impresora habilitada para imprimir.' : 'Impresora fuera del grupo de impresión.') : (t.checked ? 'Marcada como impresora a color.' : 'Marcada como solo blanco y negro.')); break;
+        }
+        case 'impEditar':
+          modal(`Editar ${esc(t.dataset.imp)}`, `<form data-form="editarImpresora" data-imp="${esc(t.dataset.imp)}" class="space-y-3"><div><label class="lbl" for="ed">Descripción</label><input id="ed" name="descripcion" maxlength="120" class="inp" value="${esc(t.dataset.desc)}" /></div><div><label class="lbl" for="eu">Ubicación</label><input id="eu" name="ubicacion" maxlength="120" class="inp" value="${esc(t.dataset.ubi)}" /></div><button class="btn btn-p w-full">Guardar</button></form>`); break;
+        case 'impQuitar':
+          if (!confirmar(`¿Quitar la impresora ${t.dataset.imp}? Se borra de CUPS y sus trabajos pendientes se cancelan. Para dejar de usarla un tiempo, mejor desmarca "Disponible para imprimir".`)) return;
+          await api('DELETE', `/impresion/impresoras/${encodeURIComponent(t.dataset.imp)}`); notify('Impresora quitada.'); reload(); break;
+        case 'cancelarImp':
+          if (!confirmar('¿Cancelar esta impresión? Las páginas vuelven a tu cupo.')) return;
+          await api('POST', `/imprimir/${id}/cancelar`, {}); notify('Impresión cancelada.'); reload(); break;
+        case 'impCtl': {
+          const a = t.dataset.accion, n = t.dataset.imp;
+          const txt = { pausar: `¿Pausar ${n}? Los trabajos nuevos esperarán en la cola.`, reanudar: `¿Reanudar ${n}?`, limpiar: `¿Vaciar la cola de ${n}? Se cancelan TODOS sus trabajos pendientes.` }[a];
+          if (!confirmar(txt)) return;
+          await api('POST', '/impresion/control', { accion: a, impresora: n });
+          notify({ pausar: 'Impresora pausada.', reanudar: 'Impresora reanudada.', limpiar: 'Cola vaciada.' }[a]); reload(); break;
+        }
+        case 'archivar':
+          if (!confirmar(t.dataset.activo === '1' ? '¿Reactivar este curso?' : '¿Archivar este curso? Docente y estudiantes dejarán de verlo (los datos se conservan).')) return;
+          await api('POST', `/cursos/${id}/estado`, { activo: t.dataset.activo === '1' }); notify('Curso actualizado.'); reload(); break;
+        case 'retirar':
+          if (!confirmar(`¿Retirar a ${t.dataset.uid} del curso? Sus notas se conservan en el historial.`)) return;
+          await api('DELETE', `/cursos/${S.cursoId}/matriculas/${encodeURIComponent(t.dataset.uid)}`); notify('Estudiante retirado.'); reload(); break;
+        case 'borrarAnuncio':
+          if (!confirmar('¿Borrar este anuncio?')) return;
+          await api('DELETE', `/anuncios/${id}`); notify('Anuncio borrado.'); reload(); break;
+        case 'borrarAct':
+          if (!confirmar('¿Borrar esta actividad?')) return;
+          await api('DELETE', `/actividades/${id}`); notify('Actividad borrada.'); reload(); break;
+      }
+    } catch (e) { notify(e.message, false); }
+  });
+  // Confirmacion dentro de la pagina (sin ventanas del navegador).
+  function confirmar(msg) { return window.confirm(msg); }
+
+  document.addEventListener('input', ev => {
+    if (ev.target.matches('[data-peso]')) {
+      const tot = [...document.querySelectorAll('[data-peso]')].reduce((a, i) => a + Number(i.value || 0), 0);
+      const el = $('#sumaPesos'); if (el) { el.textContent = `${Math.round(tot * 100) / 100} %`; el.className = Math.abs(tot - 100) < 0.01 ? 'text-emerald-700' : 'text-red-700'; }
+    }
+    if (ev.target.matches('[data-nueva]')) {
+      const v = ev.target.value, ok = { len: v.length >= 10 && v.length <= 72, mix: /[a-z]/.test(v) && /[A-Z]/.test(v) && /[0-9]/.test(v), uid: !!v && !v.toLowerCase().includes(S.user.uid.toLowerCase()) };
+      document.querySelectorAll('#reglas [data-r]').forEach(li => { li.className = ok[li.dataset.r] ? 'text-emerald-700 font-bold' : 'text-slate-500'; });
+    }
+    if (ev.target.matches('[data-bibsel]')) { if (ev.target.dataset.bibsel === 'asig') S.bibAsig = ev.target.value; else S.bibNivEdu = ev.target.value; render(); return; }
+    if (ev.target.matches('[data-bibtipo]')) {
+      const enlace = ev.target.value === 'enlace';
+      $('#bibArchivo').classList.toggle('hidden', enlace); $('#bibEnlace').classList.toggle('hidden', !enlace);
+    }
+    if (ev.target.matches('[data-filtro]')) {
+      const q = ev.target.value.trim().toLowerCase();
+      document.querySelectorAll('[data-item]').forEach(el => { el.style.display = el.dataset.item.includes(q) ? '' : 'none'; });
+    }
+  });
+
+  document.addEventListener('submit', async ev => {
+    const form = ev.target.closest('form[data-form]');
+    if (!form) return;
+    ev.preventDefault();
+    const fd = new FormData(form), v = Object.fromEntries(fd.entries());
+    const btn = form.querySelector('button:not([type=button])');
+    if (btn) btn.disabled = true;
+    try {
+      switch (form.dataset.form) {
+        case 'nuevaImpresora': {
+          const sel = v.sel, x = sel === 'ip' ? null : (S.impLista || [])[Number(sel)];
+          const uri = x ? x.uri : (v.ip || '').trim();
+          if (!uri) throw new Error('Elige una impresora de la lista o escribe su dirección IP.');
+          const r = await api('POST', '/impresion/impresoras', { nombre: (v.nombre || '').trim(), uri, modelo: x?.modelo || '', descripcion: v.descripcion || '', ubicacion: v.ubicacion || '', color: !!v.color, activa: !!v.activa });
+          closeModal(); notify(`Impresora agregada (${r.controlador || 'controlador listo'}).`); reload(); return;
+        }
+        case 'editarImpresora':
+          await api('PATCH', `/impresion/impresoras/${encodeURIComponent(form.dataset.imp)}`, { descripcion: v.descripcion || '', ubicacion: v.ubicacion || '' });
+          closeModal(); notify('Cambios guardados.'); reload(); return;
+        case 'biblioteca': {
+          const [k, val] = String(v.destino || '').split(':');
+          const dest = k === 'c' ? { curso: val } : { nivel: val };
+          const meta = { seccion: v.seccion, titulo: (v.titulo || '').trim(), descripcion: (v.descripcion || '').trim(), ...dest, ...(v.seccion === 'libros' ? { libro_autor: (v.libro_autor || '').trim(), libro_editorial: (v.libro_editorial || '').trim(), asignatura: v.asignatura, nivel_educativo: v.nivel_educativo } : { categoria: v.categoria }) };
+          if (v.tipo === 'enlace') { await api('POST', '/biblioteca/enlace', { ...meta, url: (v.url || '').trim() }); }
+          else {
+            const f = form.querySelector('input[type=file]').files[0];
+            if (!f) throw new Error('Selecciona un archivo.');
+            const tipo = ({ pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', odt: 'application/vnd.oasis.opendocument.text', ods: 'application/vnd.oasis.opendocument.spreadsheet', odp: 'application/vnd.oasis.opendocument.presentation', zip: 'application/zip' })[(f.name.split('.').pop() || '').toLowerCase()];
+            if (!tipo) throw new Error('Ese tipo de archivo no se puede publicar. Usa PDF, Word, Excel, PowerPoint, imagen o ZIP.');
+            if (f.size > S.data.bib.maxMB * 1048576) throw new Error(`El archivo supera ${S.data.bib.maxMB} MB.`);
+            const r = await fetch(`${API}/biblioteca?${new URLSearchParams({ ...meta, archivo: f.name })}`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': tipo }, body: f });
+            const dj = await r.json().catch(() => ({}));
+            if (r.status === 401) { S.user = null; render(); throw new Error('Tu sesión terminó. Vuelve a iniciar sesión.'); }
+            if (!r.ok) throw new Error(dj.error || (r.status === 413 ? 'El archivo es demasiado grande.' : 'No se pudo publicar.'));
+          }
+          closeModal(); notify(v.seccion === 'libros' ? 'Libro agregado al catálogo.' : 'Publicado en la biblioteca.'); reload(); return;
+        }
+        case 'imprimir': {
+          const f = form.querySelector('input[type=file]').files[0];
+          const tipo = f && ({ pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' }[(f.name.split('.').pop() || '').toLowerCase()] || f.type);
+          if (!f || !['application/pdf', 'image/jpeg', 'image/png'].includes(tipo)) throw new Error('Selecciona un archivo PDF, JPG o PNG.');
+          if (f.size > 10 * 1024 * 1024) throw new Error('El archivo supera 10 MB.');
+          const q = new URLSearchParams({ copias: v.copias || '1', paginas: (v.paginas || '').trim(), color: v.color ? '1' : '0', titulo: f.name });
+          const r = await fetch(`${API}/imprimir?${q}`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': tipo }, body: f });
+          const d = await r.json().catch(() => ({}));
+          if (r.status === 401) { S.user = null; render(); throw new Error('Tu sesión terminó. Vuelve a iniciar sesión.'); }
+          if (!r.ok) throw new Error(d.error || 'No se pudo enviar a imprimir.');
+          if (d.diferido) { notify(`Guardado: ${d.paginas} página(s). El servidor de impresión está en mantenimiento; tu documento se imprimirá solo cuando vuelva. Puedes cancelarlo en "Mis impresiones".`); reload(); return; }
+          notify(`Enviado: ${d.paginas} página(s). Retíralo en ${d.descripcion}${d.ubicacion ? ' (' + d.ubicacion + ')' : ''}.${d.enEspera ? ' Quedará en cola hasta que la impresora esté lista.' : ''}`); reload(); return;
+        }
+        case 'login': {
+          const d = await api('POST', '/login', { username: v.username, password: v.password });
+          S.user = d.user; go('inicio'); return;
+        }
+        case 'curso': {
+          const body = { ...v, capacidad: Number(v.capacidad), docente_uid: v.docente_uid || null };
+          if (form.dataset.id) await api('PUT', `/cursos/${form.dataset.id}`, body); else await api('POST', '/cursos', body);
+          closeModal(); notify(form.dataset.id ? 'Curso actualizado.' : 'Curso creado.'); reload(); return;
+        }
+        case 'actividad': {
+          const body = { ...v, puntaje_max: Number(v.puntaje_max) };
+          if (form.dataset.id) await api('PUT', `/actividades/${form.dataset.id}`, body); else await api('POST', `/cursos/${S.cursoId}/actividades`, body);
+          closeModal(); notify('Actividad guardada.'); reload(); return;
+        }
+        case 'anuncio': await api('POST', `/cursos/${S.cursoId}/anuncios`, v); notify('Anuncio publicado.'); reload(); return;
+        case 'entrega': await api('POST', `/actividades/${form.dataset.id}/entrega`, v); closeModal(); notify('Entrega enviada.'); reload(); return;
+        case 'matricula': {
+          const uids = fd.getAll('uids');
+          if (!uids.length) throw new Error('Selecciona al menos un estudiante.');
+          const r = await api('POST', `/cursos/${S.cursoId}/matriculas`, { uids });
+          closeModal(); notify(`${r.agregados} estudiante(s) matriculado(s).`); reload(); return;
+        }
+        case 'pesos': {
+          const pesos = Object.fromEntries(TIPOS.map(t => [t, Number(v[t] || 0)]));
+          await api('PUT', `/cursos/${S.cursoId}/ponderacion`, { pesos });
+          notify('Ponderación guardada.'); reload(); return;
+        }
+        case 'clave': {
+          if (v.nueva !== v.nueva2) throw new Error('Las contraseñas nuevas no coinciden.');
+          const r = await api('POST', '/cambiar-clave', { actual: v.actual, nueva: v.nueva });
+          form.reset(); notify(r.verificada ? 'Contraseña cambiada. Úsala desde ahora en el correo, el Wi-Fi y la plataforma.' : 'Contraseña cambiada (verificación pendiente).'); return;
+        }
+        case 'nota': {
+          await api('PUT', `/actividades/${S.actId}/notas/${encodeURIComponent(form.dataset.uid)}`, { nota: v.nota === '' ? null : Number(v.nota), comentario: v.comentario });
+          notify('Nota guardada.'); return;
+        }
+      }
+    } catch (e) {
+      if (form.dataset.form === 'login') { const el = $('#loginError'); el.textContent = e.message; el.classList.remove('hidden'); }
+      else if ($('#modal').innerHTML) modalError(e.message); else notify(e.message, false);
+    } finally { if (btn) btn.disabled = false; }
+  });
+
+  function render() {
+    const app = $('#app');
+    if (!S.user) { closeModal(); app.innerHTML = loginView(); return; }
+    let content = '';
+    if (S.busy) content = '<p class="text-sm text-slate-500">Cargando…</p>';
+    else if (S.data.error) content = `<div class="card p-6 text-sm font-semibold text-red-700">${esc(S.data.error)}</div>`;
+    else content = ({ inicio: inicioView, cursos: cursosView, curso: cursoView, actividad: actividadView, usuarios: usuariosView, auditoria: auditoriaView, notas: notasView, perfil: perfilView, servicios: serviciosView, impresion: impresionView, imprimir: imprimirView, biblioteca: bibliotecaView }[S.route] || inicioView)();
+    app.innerHTML = layout(content);
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    sessionStorage.removeItem('lms_user');
+    try { S.user = (await api('GET', '/me')).user; } catch { S.user = null; }
+    if (S.user) go('inicio'); else render();
+  });
+  </script>
+</body>
+</html>
