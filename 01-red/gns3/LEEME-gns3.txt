@@ -1,0 +1,32 @@
+=====================================================================
+ EMULACION DE LA RED EN GNS3 - Centro Educativo Mejoland
+=====================================================================
+Proyecto GNS3 (version 2.2) con la topologia completa: R1 y R3 (borde), R4 y R5 (proveedores),
+MikroTik CHR (ISP-A), switches de distribucion, acceso y nube (routers c2691 con EtherSwitch),
+3 routers domesticos OpenWrt y 15 PCs virtuales (VPCS) en las VLAN de usuarios.
+Sirve para validar VLAN, HSRP, OSPF, BGP, DHCP y NAT/PAT antes de montar los equipos fisicos.
+
+CONTENIDO
+  proyecto-mejoland/proyecto-mejoland.gns3   Topologia (equipos, enlaces y posiciones)
+  proyecto-mejoland/project-files/           Configuracion guardada de cada equipo:
+      dynamips/*/configs/*.cfg               Cisco (startup-config)
+      vpcs/*/startup.vpc                     IP de cada PC virtual
+      qemu/*/hda_disk.qcow2                  Disco del MikroTik y de los OpenWrt (sobre su imagen base)
+  appliances/mikrotik-chr.gns3a, openwrt.gns3a   Plantillas para importar MikroTik CHR y OpenWrt
+
+IMAGENES NECESARIAS (no se incluyen en el repositorio)
+  C3660-JK.BIN                                       Cisco 3660 (R1, R3, R4, R5)
+  c2691-entservicesk9-mz.124-13b_2.image             Cisco 2691 (switches emulados)
+  chr-7.24.6.img                                     MikroTik CHR 7.24.6   (mikrotik.com/download)
+  openwrt-25.12.6-x86-64-generic-ext4-combined.img   OpenWrt 25.12.6       (downloads.openwrt.org)
+  Las imagenes Cisco IOS son software con licencia: cada usuario debe obtenerlas por su cuenta.
+  MikroTik CHR y OpenWrt se descargan gratis de sus sitios oficiales.
+
+COMO ABRIRLO
+  1. Instalar GNS3 2.2 (con la VM de GNS3 o un servidor Linux con dynamips, qemu y vpcs).
+  2. Cargar las imagenes: Edit > Preferences > Dynamips > IOS routers (c3600 y c2691)
+     y File > Import appliance (appliances/*.gns3a) para MikroTik y OpenWrt.
+  3. Copiar la carpeta proyecto-mejoland a la carpeta de proyectos de GNS3
+     (Linux: ~/GNS3/projects/, Windows: Documentos\GNS3\projects\).
+  4. File > Open project > proyecto-mejoland.gns3 y encender todos los equipos.
+  5. Verificar con las pruebas de 01-red/14-PRUEBAS-red.txt.

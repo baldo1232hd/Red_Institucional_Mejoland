@@ -13,3 +13,6 @@
 *.bat    text eol=crlf
 *.pkt    binary
 *.jpg    binary
+*.qcow2  binary
+*.gns3   text eol=lf
+*.gns3a  text eol=lf

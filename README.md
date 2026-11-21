@@ -110,6 +110,7 @@ Cada cambio de modo regenera los nombres, las zonas DNS, los enlaces de EduNova 
 | `RESPALDO-CONFIGURACION.txt` | Comandos para exportar la configuración de cada equipo |
 | `inventario-red.sh` | Inventario de red de un servidor (solo lectura) |
 | `topologia/topologia-mejoland.pkt` | Topología en Cisco Packet Tracer |
+| `gns3/` | Emulación completa en GNS3: proyecto, configuración de cada equipo y plantillas de MikroTik y OpenWrt (ver `gns3/LEEME-gns3.txt`) |
 
 ### `02-servidores/` — Servidores Debian 13
 
@@ -267,6 +268,8 @@ Convenciones:
 4. Ajustar las IP de Tailscale de la tabla de servidores si las de tu red son distintas. Están al inicio de los scripts y en `corregir-modos.sh`.
 
 ### Fase 1 — Red
+Opcional: validar primero la topología en GNS3 (`01-red/gns3/LEEME-gns3.txt`).
+
 Seguir [`01-red/00-LEEME-red.txt`](01-red/00-LEEME-red.txt):
 1. Cablear.
 2. Borrar la configuración de los equipos.
