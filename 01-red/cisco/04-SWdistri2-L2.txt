@@ -9,7 +9,7 @@
 !   Gi1/0/3        -> SW-ACC-DOCENTES      troncal
 !   Gi1/0/4        -> SW-ACC-ESTUDIANTES   troncal
 !   Gi1/0/7-8    -> SWdistri1            EtherChannel Po1 (L2)
-!   Gi1/0/10       -> damian 192.168.40.13   acceso VLAN 40 (servidor publicado)
+!   Gi1/0/10       -> damian 192.168.40.13   acceso VLAN 40 (replica)
 !   Gi1/0/11       -> Mac (VMs) 192.168.40.x  acceso VLAN 40
 ! =====================================================================
 enable

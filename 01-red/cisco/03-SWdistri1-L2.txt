@@ -11,7 +11,7 @@
 !   Gi1/0/7-8    -> SWdistri2            EtherChannel Po1 (L2)
 !   Gi1/0/11       -> srv-bd 192.168.40.10     acceso VLAN 40
 !   Gi1/0/12       -> srv-aaa-1 192.168.40.11  acceso VLAN 40
-!   Gi1/0/13       -> correo 192.168.60.10     acceso VLAN 60 (DMZ)
+!   Gi1/0/13       -> correo 192.168.60.10     acceso VLAN 60 (DMZ, servidor publicado)
 ! =====================================================================
 enable
 configure terminal
