@@ -1,7 +1,7 @@
 ! =====================================================================
 !  R3  BORDE + DISTRIBUCION (nucleo colapsado)  AS 65004
 !  Nucleo colapsado en router ISR (Gi0/0/0 campus, Gi0/0/1 nube) con NAT estatico hacia el proxy de la DMZ
-!  (correo 192.168.60.10 = 10.1.40.13).
+!  (damian 192.168.40.13 = 10.1.40.13).
 !  Antes de aplicar:  enable / write erase / reload
 !
 !   Gi0/0/1  -> SW-NUBE-B (troncal)   NAT outside / BGP a la nube
@@ -105,11 +105,11 @@ route-map NAT-ISP-B permit 10
 ip nat inside source route-map NAT-ISP-A interface GigabitEthernet0/0/1.213 overload
 ip nat inside source route-map NAT-ISP-B interface GigabitEthernet0/0/1.235 overload
 
-! ===== NAT estatico: proxy de la DMZ (correo) publicado como 10.1.40.13 =====
-ip nat inside source static 192.168.60.10 10.1.40.13
+! ===== NAT estatico: damian (192.168.40.13) publicado como 10.1.40.13 =====
+ip nat inside source static 192.168.40.13 10.1.40.13
 
-! ===== Anuncio condicional: solo publica 10.1.40.13 si la DMZ (VLAN 60) esta arriba =====
-track 1 ip route 192.168.60.0 255.255.255.0 reachability
+! ===== Anuncio condicional: solo publica 10.1.40.13 si la VLAN de servidores (40) esta arriba =====
+track 1 ip route 192.168.40.0 255.255.255.0 reachability
  delay down 3 up 10
 ip route 10.1.40.13 255.255.255.255 Null0 track 1
 ip prefix-list SALIDA-ISP seq 10 permit 10.1.40.13/32

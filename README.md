@@ -25,7 +25,7 @@ Este repositorio contiene las configuraciones finales y los scripts para montar 
                      SW-NUBE-A / SW-NUBE-B  (nube emulada)
                           |            |
                  R1 (borde + distribucion) === R3 (borde + distribucion)   AS 65004
-                 HSRP, OSPF, DHCP, NAT/PAT, BGP     NAT 192.168.60.10 = 10.1.40.13
+                 HSRP, OSPF, DHCP, NAT/PAT, BGP     NAT 192.168.40.13 = 10.1.40.13
                           |            |
                   SWdistri1 ===Po1=== SWdistri2   (capa 2)
                    /   |   \            |   \
@@ -55,7 +55,7 @@ Este repositorio contiene las configuraciones finales y los scripts para montar 
 | srv-apps | VM en MacBook Pro (UTM) | 192.168.40.21 | 100.107.96.3 | GLPI 11, Nextcloud |
 
 - **IP virtual de EduNova:** 192.168.40.100. La toma el servidor activo, srv-bd o damian.
-- **Publicación:** NAT estático en R1/R3, 192.168.60.10 ↔ 10.1.40.13. Solo se publican los puertos 80 y 443.
+- **Publicación:** NAT estático en R1/R3, 192.168.40.13 (damian) ↔ 10.1.40.13. Solo se publican los puertos 80 y 443.
 - **Dominios:** `mejoland.edu.ec` es el dominio público y del correo; `proyecto.local` es el dominio interno y la base LDAP `dc=proyecto,dc=local`.
 
 ### Modos de red

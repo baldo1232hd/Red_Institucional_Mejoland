@@ -16,7 +16,7 @@ ARQUITECTURA
     R3 activo en VLAN 30, 50 y 60   (R1 de respaldo)
   DHCP (rango partido, redundante; solo VLAN 10, 20 y 30)
     R1 entrega .10 a .127   |   R3 entrega .128 a .254
-  Publicacion: NAT estatico 192.168.60.10 (proxy de la DMZ) = 10.1.40.13, solo 80 y 443.
+  Publicacion: NAT estatico 192.168.40.13 (damian) = 10.1.40.13, solo 80 y 443.
 
 ORDEN DE APLICACION
   1. Cablear segun la tabla siguiente y la cabecera de cada archivo.
