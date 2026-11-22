@@ -1,11 +1,11 @@
 ! =====================================================================
-!  SW-NUBE-B  (Catalyst 2960, capa 2)
+!  SW-NUBE-B  (Cisco Catalyst Gigabit, capa 2; puertos Gi1/0/x)
 !  Antes de aplicar:  enable / write erase / reload  (responder "no" a Save)
 !
-!   Gi0/1  -> MikroTik ether7          troncal 202,213
-!   Fa0/1  -> R5 Gi0/0                 troncal 202,235,245
-!   Fa0/2  -> R3 Gi0/1                 troncal 213,235
-!   Gi0/2  -> SW-NUBE-A Gi0/2          troncal 245
+!   Gi1/0/1 -> MikroTik ether7          troncal 202,213
+!   Gi1/0/2 -> R5 Gi0/0/0                 troncal 202,235,245
+!   Gi1/0/3 -> R3 Gi0/0/1                 troncal 213,235
+!   Gi1/0/4 -> SW-NUBE-A Gi1/0/4          troncal 245
 ! =====================================================================
 enable
 configure terminal
@@ -22,26 +22,26 @@ vlan 235
 vlan 245
  name R4-R5
 exit
-interface GigabitEthernet0/1
+interface GigabitEthernet1/0/1
  description MikroTik ether7
  switchport mode trunk
  switchport trunk allowed vlan 202,213
  switchport nonegotiate
  no shutdown
-interface FastEthernet0/1
- description R5 Gi0/0
+interface GigabitEthernet1/0/2
+ description R5 Gi0/0/0
  switchport mode trunk
  switchport trunk allowed vlan 202,235,245
  switchport nonegotiate
  no shutdown
-interface FastEthernet0/2
- description R3 Gi0/1
+interface GigabitEthernet1/0/3
+ description R3 Gi0/0/1
  switchport mode trunk
  switchport trunk allowed vlan 213,235
  switchport nonegotiate
  no shutdown
-interface GigabitEthernet0/2
- description SW-NUBE-A Gi0/2
+interface GigabitEthernet1/0/4
+ description SW-NUBE-A Gi1/0/4
  switchport mode trunk
  switchport trunk allowed vlan 245
  switchport nonegotiate

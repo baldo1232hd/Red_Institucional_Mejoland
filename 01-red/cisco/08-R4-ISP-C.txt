@@ -2,7 +2,7 @@
 !  R4 ISP-C (AS 65003)   Router Cisco del rack
 !  Router ISR con IOS-XE (interfaces Gi0/0/0 y Gi0/0/1) y servidor DHCP para la red domestica.
 !  Antes de aplicar:  enable / write erase / reload
-!   Gi0/0/0  -> troncal a SW-NUBE-A Fa0/1 (subinterfaces)
+!   Gi0/0/0  -> troncal a SW-NUBE-A Gi1/0/2 (subinterfaces)
 !   Gi0/0/1  -> Casa 1 (WAN del router casero)
 ! =====================================================================
 enable

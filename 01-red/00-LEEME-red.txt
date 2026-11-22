@@ -29,14 +29,14 @@ ORDEN DE APLICACION
 
 CABLEADO (puerto -> puerto)
   MikroTik ether5          -> Vivobook (VyOS, salida a Internet)
-  MikroTik ether6          -> SW-NUBE-A Gi0/1
-  MikroTik ether7          -> SW-NUBE-B Gi0/1
+  MikroTik ether6          -> SW-NUBE-A Gi1/0/1
+  MikroTik ether7          -> SW-NUBE-B Gi1/0/1
   MikroTik ether8          -> Casa 3 (WAN)
-  SW-NUBE-A Fa0/1          -> R4 Gi0/0/0
-  SW-NUBE-A Fa0/2          -> R1 Gi0/0/1
-  SW-NUBE-B Fa0/1          -> R5 Gi0/0/0
-  SW-NUBE-B Fa0/2          -> R3 Gi0/0/1
-  SW-NUBE-A Gi0/2          -> SW-NUBE-B Gi0/2
+  SW-NUBE-A Gi1/0/2          -> R4 Gi0/0/0
+  SW-NUBE-A Gi1/0/3          -> R1 Gi0/0/1
+  SW-NUBE-B Gi1/0/2          -> R5 Gi0/0/0
+  SW-NUBE-B Gi1/0/3          -> R3 Gi0/0/1
+  SW-NUBE-A Gi1/0/4          -> SW-NUBE-B Gi1/0/4
   R4 Gi0/0/1               -> Casa 1 (WAN)
   R5 Gi0/0/1               -> Casa 2 (WAN)
   R1 Gi0/0/0               -> SWdistri1 Gi1/0/1     (troncal, todas las VLAN)

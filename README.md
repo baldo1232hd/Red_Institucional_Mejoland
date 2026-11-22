@@ -79,7 +79,7 @@ Cada cambio de modo regenera los nombres, las zonas DNS, los enlaces de EduNova 
 | srv-monitoreo | 2 | 4 GiB | 45 GiB |
 | srv-apps | 2 | 5 GiB | 70 GiB |
 
-**Equipos de red:** 4 routers Cisco ISR con IOS-XE, 2 switches Cisco C1000, 5 switches Catalyst 2960, un MikroTik CCR2004 y 3 routers domésticos.
+**Equipos de red:** 4 routers Cisco ISR con IOS-XE, 2 switches Cisco C1000, 3 switches Catalyst 2960 de acceso, 2 switches Cisco Gigabit para la nube, un MikroTik CCR2004 y 3 routers domésticos.
 
 **Equipo para Centinela:** PC con GPU de 8 GB o más, en Windows o Fedora, con Ollama y Python 3.11 o superior.
 

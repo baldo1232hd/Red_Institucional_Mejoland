@@ -1,8 +1,8 @@
 # =====================================================================
 #  MikroTik CCR2004-16G-2S+  ISP-A (AS 65001)
 #   ether8  10.1.50.1/24   -> Casa 3 (WAN del TP-Link, IP por DHCP)
-#   ether6  troncal        -> SW-NUBE-A Gi0/1  (VLAN 203 -> R4, VLAN 211 -> R1)
-#   ether7  troncal        -> SW-NUBE-B Gi0/1  (VLAN 202 -> R5, VLAN 213 -> R3)
+#   ether6  troncal        -> SW-NUBE-A Gi1/0/1  (VLAN 203 -> R4, VLAN 211 -> R1)
+#   ether7  troncal        -> SW-NUBE-B Gi1/0/1  (VLAN 202 -> R5, VLAN 213 -> R3)
 #   ether5  190.0.50.1/30  -> Vivobook (VM VyOS, salida real a Internet) + 192.168.99.1/24 gestion (WinBox desde la Vivobook)
 #  Aplicar una linea a la vez y esperar el prompt.
 # =====================================================================
